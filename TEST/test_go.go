@@ -3,10 +3,8 @@ package main
 /*
 #include "test.h"
 */
-import (
-	"C"
-	"fmt"
-	)
+import "C"
+import "fmt"
 
 func main(){
 	i := C.test_func()
