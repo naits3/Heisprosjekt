@@ -6,8 +6,3 @@ int test_func() {
 	return 2;
 }
 
-int main() {
-	int h = test_func();
-	printf("%i",h);
-	return 0;
-}
