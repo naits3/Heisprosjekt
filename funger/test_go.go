@@ -1,5 +1,4 @@
 package main 
-
 /*
 #include "test.h"
 */
@@ -9,4 +8,5 @@ import "fmt"
 func main(){
 	i := C.test_func()
 	fmt.Println(i)
+
 }
