@@ -60,20 +60,23 @@ func connDurationHandler(){
 	//}
 }
 
-func createBroadcastConn() {
-	IPAddr := getHostIP()
-	IPAddr = IPAddr[0:len(IPAddr) -3]
-	IPAddr += "255"
-	println("Broadcast IP:"+IPAddr)
-	//Use 255 as last part in IP
-	//make UDP connection
+func createBroadcastConn() net.Conn{
+	BCAddr := getLocalIP()
+	BCAddr = BCAddr[0:len(BCAddr) -3]
+	BCAddr += "255"
+	println("Broadcast IP:"+BCAddr)
+
+	conn, err := net.Dial("udp",BCAddr+":"+port)
+	if err != nil {print("Error creating UDP") }// Error handling here}
+	return conn
+
 }
 
 func GetPort() string{
 	return port
 }
 
-func getHostIP() string{
+func getLocalIP() string{
 	ifaces, _ := net.Interfaces()
 	// handle err
 	for _, i := range ifaces {
