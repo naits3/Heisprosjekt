@@ -43,7 +43,19 @@ func sendPing(udpConn net.Conn){
 	}
 }
 
-func listenPing(port string, chListenPing chan string){
+func listenPing(port string, chListenPing chan string) string{
+	addr, err := net.ResolveUDPAddr("udp",port)
+	if err != nil{return "0"} // Handle error
+	conn, err := net.ListenUDP("udp", addr)
+	if err != nil{return "0"} // Handle error
+
+	var buffer []byte = make([]byte, 1500)
+	for{
+		_, senderAddr, err := conn.ReadFromUDP(buffer)
+		if err != nil{return "0"} // Handle error
+		chListenPing <- senderAddr.String()
+	}
+
 	// listning for broadcast signals
 	// if valid signal send to connDurationHandler
 }
