@@ -1,9 +1,9 @@
 package network
 
-import (
-	"fmt"
-	"net"
-)
+// import (
+// 	"fmt"
+// 	"net"
+// )
 
 // needs to import meassageModule
 // Com = Communication
@@ -21,13 +21,13 @@ func initComModule(){
 
 func comHandler(){
 	// Select which controls sending and receiving
-	for{
-		select{
-			case: // Recive meassage 
-				// Send pack for deserialization in meassageModule
-			case: //offlinecase
-		}
-	}
+	// for{
+	// 	select {
+	// 		case: // Recive meassage 
+	// 			// Send pack for deserialization in meassageModule
+	// 		case: //offlinecase
+	// 	}
+	// }
 }
 
 func listenPack(port string, chReceive chan []byte){
