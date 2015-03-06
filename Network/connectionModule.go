@@ -3,12 +3,12 @@ package main
 import (
 	"net"
 	//"strings"
-	//"time"
+	"time"
 	//"fmt"
 )
 
 var connMap map[string]net.Conn = nil
-var port string							//Decide a listening port!!
+var port string	= "3000"						//Decide a listening port!!
 
 // conn is connection
 
@@ -35,7 +35,12 @@ func GetConnMap() {
 }
 
 func sendPing(udpConn net.Conn){
-	// Ping all in subnet every 100ms on broadcast
+	message := "I AM ALIVE"
+	timeDur := 500*time.Millisecond
+	
+	for _ = range time.Tick(timeDur){
+		udpConn.Write([]byte(message)) // Send JSON-melding her
+	}
 }
 
 func listenPing(port string, chListenPing chan string){
@@ -96,5 +101,6 @@ func getLocalIP() string{
 
 
 func main(){
-	createBroadcastConn()
+	BCconn := createBroadcastConn()
+	sendPing(BCconn)
 }
