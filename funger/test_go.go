@@ -10,3 +10,5 @@ func main(){
 	fmt.Println(i)
 
 }
+
+//kjøring: go install in folder.

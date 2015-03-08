@@ -30,7 +30,7 @@ void *·_cgo_runtime_cmalloc = &runtime_cmalloc;
 
 void ·_Cerrno(void*, int32);
 
-#pragma cgo_import_static _cgo_6fe84c1f145e_Cfunc_test_func
-void _cgo_6fe84c1f145e_Cfunc_test_func(void*);
+#pragma cgo_import_static _cgo_56271688278c_Cfunc_test_func
+void _cgo_56271688278c_Cfunc_test_func(void*);
 #pragma dataflag NOPTR
-void *·_cgo_6fe84c1f145e_Cfunc_test_func = _cgo_6fe84c1f145e_Cfunc_test_func;
+void *·_cgo_56271688278c_Cfunc_test_func = _cgo_56271688278c_Cfunc_test_func;

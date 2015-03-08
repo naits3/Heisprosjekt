@@ -1,4 +1,4 @@
-#line 2 "/home/martiskj/go/src/Heisprosjekt/funger/test_go.go"
+#line 3 "C:\\Users\\stian\\Documents\\GitHub\\go\\src\\Heisprosjekt\\TEST\\test_go.go"
 
 #include "test.h"
 
@@ -26,7 +26,7 @@ extern char* _cgo_topofstack(void);
 #include <string.h>
 
 void
-_cgo_6fe84c1f145e_Cfunc_test_func(void *v)
+_cgo_56271688278c_Cfunc_test_func(void *v)
 {
 	struct {
 		int r;
