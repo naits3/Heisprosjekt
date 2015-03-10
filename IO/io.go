@@ -41,7 +41,7 @@ func pollUserOrders(chUserOrder chan int){
 
 	i := 0
 	for{
-	 	i = C.elev_get_button_signal(1,1)
+	 	i = 
 	 	if i==1 {
 	 		chUserOrder <-- 1
 	 		i = 0

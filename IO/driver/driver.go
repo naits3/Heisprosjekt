@@ -11,7 +11,6 @@ import "C"
 
 type elev_button_type_t int
 type elev_motor_direction_t int
-type ElevatorType int
 
 const (
 	BUTTON_CALL_UP elev_button_type_t = iota
@@ -41,24 +40,12 @@ func GetButtonSignal(button elev_button_type_t, floor int) int {
 	return int(C.elev_get_button_signal(C.elev_button_type_t(button), C.int(floor)))
 }
 
-func GetStopSignal() int {
-	return int(C.elev_get_stop_signal())
-}
-
-func GetObstructionSignal() int {
-	return int(C.elev_get_stop_signal())
-}
-
-func SetFloorIndicator(floor int) {
+func SetFloorIndicatorLamp(floor int) {
 	C.elev_set_floor_indicator(C.int(floor))
 }
 
 func SetButtonLamp(button elev_button_type_t, floor int, value int) {
 	C.elev_set_button_lamp(C.elev_button_type_t(button), C.int(floor), C.int(value))
-}
-
-func SetStopLamp(value int) {
-	C.elev_set_stop_lamp(C.int(value))
 }
 
 func SetDoorOpenLamp(value int) {
