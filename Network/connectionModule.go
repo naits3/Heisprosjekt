@@ -2,12 +2,12 @@ package main
 
 import (
 	"net"
-	//"strings"
+	"strings"
 	"time"
 	//"fmt"
 )
 
-var connMap map[string]net.Conn = nil
+var connStorage map[string]net.Conn = nil
 var port string	= "3000"						//Decide a listening port!!
 
 // conn is connection
@@ -43,17 +43,24 @@ func sendPing(udpConn net.Conn){
 	}
 }
 
-func listenPing(port string, chListenPing chan string) string{
-	addr, err := net.ResolveUDPAddr("udp",port)
+func listenPing(port string, chListenPing chan string, quit chan bool) string{
+	addr, err := net.ResolveUDPAddr("udp","3000")
 	if err != nil{return "0"} // Handle error
 	conn, err := net.ListenUDP("udp", addr)
 	if err != nil{return "0"} // Handle error
 
 	var buffer []byte = make([]byte, 1500)
+	
 	for{
-		_, senderAddr, err := conn.ReadFromUDP(buffer)
-		if err != nil{return "0"} // Handle error
-		chListenPing <- senderAddr.String()
+		select {
+		case <- quit:
+			conn.Close()
+			return "hade"
+		default:
+			_, senderAddr, err := conn.ReadFromUDP(buffer)
+			if err != nil{return "0"} // Handle error
+			chListenPing <- senderAddr.String()
+		}
 	}
 
 	// listning for broadcast signals
@@ -78,12 +85,10 @@ func connDurationHandler(){
 }
 
 func createBroadcastConn() net.Conn{
-	BCAddr := getLocalIP()
-	BCAddr = BCAddr[0:len(BCAddr) -3]
-	BCAddr += "255"
-	println("Broadcast IP:"+BCAddr)
-
-	conn, err := net.Dial("udp",BCAddr+":"+port)
+	broadcastIP := getBroadcastIP()
+	
+	// println(broadcastIP)
+	conn, err := net.Dial("udp",broadcastIP+":"+port)
 	if err != nil {print("Error creating UDP") }// Error handling here}
 	return conn
 
@@ -93,26 +98,44 @@ func GetPort() string{
 	return port
 }
 
-func getLocalIP() string{
+func getBroadcastIP() string{
 	ifaces, _ := net.Interfaces()
 	// handle err
 	for _, i := range ifaces {
 	    addrs, _ := i.Addrs()
 	    // handle err
 	    for _, addr := range addrs {
-	        switch v:= addr.(type) {
+	        switch addressType:= addr.(type) {
 	        case *net.IPAddr:
-	            if(v.IP.String() != "0.0.0.0"){
-	            	return(v.IP.String())
+	            if(addressType.IP.String() != "0.0.0.0"){
+	            	localAddr := addressType.IP.String()
+	            	localAddrSplitted := strings.Split(localAddr,".")
+	            	localAddrSplitted[3] = "255"
+	            	broadcastAddr := strings.Join(localAddrSplitted,".")
+	            	return(broadcastAddr)
 	        	}
 	        }
 	    }
 	}
-	return "is_offline"
+	return "is_offline" // EDIT THIS?
+
+
 }
 
 
 func main(){
-	BCconn := createBroadcastConn()
-	sendPing(BCconn)
+	chListenPing := make(chan string) // Buffersize?
+	chQuit := make(chan bool)
+
+	go listenPing(port, chListenPing, chQuit)
+
+	for {
+		select {
+			case elevatorAddr := <- chListenPing:
+				println(elevatorAddr)
+
+			case <- time.After(time.Second):
+				println("Time's up moddafucka")
+		}
+	}	
 }
