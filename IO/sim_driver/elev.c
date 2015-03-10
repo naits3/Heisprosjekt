@@ -29,11 +29,13 @@ static const int button_channel_matrix[N_FLOORS][N_BUTTONS] = {
     {BUTTON_UP4, BUTTON_DOWN4, BUTTON_COMMAND4},
 };
 
-int elev_init(void) {
+static ElevatorType elevatorType    = ET_simulation;
+
+int elev_init(ElevatorType type) {
     int i;
 
     // Init hardware
-    if (!io_init())
+    if (!io_init(type))
         return 0;
 
     // Zero all floor button lamps

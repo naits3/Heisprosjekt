@@ -5,17 +5,16 @@
 #ifndef __INCLUDE_DRIVER_H__
 #define __INCLUDE_DRIVER_H__
 
-
+#include "io.h"
 // Number of floors
 #define N_FLOORS 4
-
 
 
 /**
   Initialize elevator.
   @return Non-zero on success, 0 on failure.
 */
-int elev_init(void);
+int elev_init(ElevatorType type);
 
 
 
