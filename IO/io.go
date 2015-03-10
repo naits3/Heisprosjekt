@@ -1,12 +1,7 @@
 package IO
 
-/*
-#cgo LDFLAGS: -lcomedi -lm
-#include "elev.h"
-*/
-import "C"
 
-//Define all neassacary enums
+import "/driver"
 
 func InitializeDriver(chController chan int){
 	//create all channels
