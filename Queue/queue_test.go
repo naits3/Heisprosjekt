@@ -4,12 +4,26 @@ import (
 	"testing"
 )
 
-// OBS! For aa faa print til aa fungere, maa funksjonsnavnene vaere global! Stor capital letter
+// OBS! For aa faa print til aa fungere, maa funksjonsnavnene vaere global! 
+//Stor capital letter
 
 func printQueue(queueData elevatorData) {
 	for row := 0; row < FLOORS; row ++ {
 		for col := 0; col < 2; col ++ {
 			print(" ",queueData.outsideOrders[FLOORS-1-row][col])
+		}
+		print(" |",queueData.insideOrders[FLOORS-1-row])
+		if  row == FLOORS-1-queueData.floor {
+			print(" *")
+			switch queueData.direction {
+				case UP:
+					print("U")
+				case DOWN:
+					print("D")
+				default:
+					print("I")
+			}
+			
 		}
 		println(" ")
 	}
@@ -42,4 +56,19 @@ func TestMergeOrders(t *testing.T) {
 	println("After Merge:")
 	printQueue(mergedData)
 
+}
+
+func TestCalcTotalCost(t *testing.T) {
+	var testData1 elevatorData
+	testData1.direction = UP
+	testData1.floor = 1
+	testData1.outsideOrders[2][1] = ORDER
+	testData1.outsideOrders[1][1] = ORDER
+	testData1.outsideOrders[1][0] = ORDER
+	testData1.insideOrders[1] = ORDER
+
+	printQueue(testData1)
+
+	cost := CalcTotalCost(testData1)
+	println(cost)
 }
