@@ -1,6 +1,6 @@
 package main
 
-import "Heisprosjekt/IO/driver"
+import "Heisprosjekt/driver"
 import "time"
 import "fmt"
 

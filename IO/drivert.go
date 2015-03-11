@@ -1,6 +1,6 @@
 package main
 
-import "Heisprosjekt/IO/driver"
+import "Heisprosjekt/driver"
 import "time"
 import "fmt"
 import "runtime"
@@ -17,13 +17,13 @@ func main() {
 
 
 
-	go runElevator(done)
-    go floorsensor(done)
-    go buttonSignalUp(done)
-	go buttonSignalDown(done)
-	go buttonSignalInside(done)
+	// go runElevator(done)
+ //    go floorsensor()
+ //    go buttonSignalUp(done)
+	// go buttonSignalDown(done)
+	//go buttonSignalInside(done)
 	go setButtonLamp()
-	go setFloorIndicatorLamp()
+	// go setFloorIndicatorLamp()
 
 	<-done
 	<-done
@@ -99,11 +99,18 @@ func setButtonLamp(){
 	driver.SetButtonLamp(1,1,1)
 	driver.SetButtonLamp(1,2,1)
 	driver.SetButtonLamp(1,3,1)
+	driver.SetButtonLamp(2,0,1)
+	driver.SetButtonLamp(2,1,1)
+	driver.SetButtonLamp(2,2,1)
+	driver.SetButtonLamp(2,3,1)
 }
 
 func setFloorIndicatorLamp(){
 	driver.SetFloorIndicatorLamp(0)
+	time.Sleep(time.Second)
 	driver.SetFloorIndicatorLamp(1)
+	time.Sleep(time.Second)
 	driver.SetFloorIndicatorLamp(2)
+	time.Sleep(time.Second)
 	driver.SetFloorIndicatorLamp(3)
 }
