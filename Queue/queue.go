@@ -1,6 +1,6 @@
 
 
-package Queue//package queue
+package Queue//package Queue
 
 type elevatorData struct { 
 	floor 			int
@@ -20,11 +20,16 @@ const (
 	DELETE_ORDER = -1
 )
 
-//Definerer egne variabler:
-var localQueue     	elevatorData
-var globalQueues  []elevatorData
+const (
+	UP = 1
+	IDLE = 0
+	DOWN = -1
+)
+
 
 const FLOORS = 4 //Import from Styring!
+var localQueue     	elevatorData
+var globalQueues  []elevatorData
 
 
 func MergeOrders(queueList []elevatorData) elevatorData {
@@ -51,25 +56,43 @@ func MergeOrders(queueList []elevatorData) elevatorData {
 
 	mergedData.outsideOrders = mergedQueue
 	return mergedData
-
-
 }
 
 func assignOrders(queueList []elevatorData, mergedQueue elevatorData) int { // return elevatorData
 	//queueList = globalQueues + localQueue
-	//for direction = 0; direction < 2; direction ++:
-		//for floor = 0; floor < FLOOR; floor ++:
-			//if mergedQueue.outsideOrders[floor][direction] == 1:
-				//Altsaa, hvis bestilling ...
-				//for elevator = 0; elevator < len(queueList); elevator ++:
-					//calcTotalCost(elevator)
-					//minst totalCost faar ordren
+	for floor := 0; floor < FLOORS; floor ++ {
+		for direction := 0; direction < 2; direction ++ {
+			
+			if mergedQueue.outsideOrders[floor][direction] == ORDER {
+				for eachElevator := 0; eachElevator < len(queueList); eachElevator ++{
+					calcTotalCost(queueList[eachElevator])
+				}
+				//minst totalCost faar ordren
+				//Hvilke tall skal vi bruke for aa gi unik ID til hver heis?
+				// 1 er jo ORDER!
+			}
+		}
+	}
 
 	return 0			
 
 }
 
-func calcTotalCost() int {
+func calcTotalCost(queueData elevatorData) int {
+	const COST_FOR_ORDER = 3
+	const COST_FOR_MOVE = 1
+
+	switch queueData.direction {
+		case UP:
+			// ...
+		case DOWN:
+			// ...
+		default: //Ta med IDLE?
+			// ...
+	}
+
+	// Gaa gjennom hele koen (bruk dir for aa bestemme start-retning) og legg til costs
+	// for hver etasje/ordre helt til alle ordrene er tatt med!
 	return 0;
 }
 
