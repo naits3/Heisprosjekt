@@ -1,12 +1,7 @@
 package IO
 
-/*
-#cgo LDFLAGS: -lcomedi -lm
-#include "elev.h"
-*/
-import "C"
 
-//Define all neassacary enums
+import "/driver"
 
 func InitializeDriver(chController chan int){
 	//create all channels
@@ -46,7 +41,7 @@ func pollUserOrders(chUserOrder chan int){
 
 	i := 0
 	for{
-	 	i = C.elev_get_button_signal(1,1)
+	 	i = 
 	 	if i==1 {
 	 		chUserOrder <-- 1
 	 		i = 0
