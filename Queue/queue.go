@@ -33,7 +33,8 @@ func MergeOrders(queueList []elevatorData) elevatorData {
 	var mergedData elevatorData
 	var mergedQueue [FLOORS][2]int	
 
-	for floor := 0; floor < FLOORS; floor ++ {		
+	for floor := 0; floor < FLOORS; floor ++ {
+		directionLoop:	
 		for direction := 0; direction < 2; direction ++ {
 			
 			for eachQueue := 0; eachQueue < len(queueList); eachQueue ++ {
@@ -42,7 +43,7 @@ func MergeOrders(queueList []elevatorData) elevatorData {
 						mergedQueue[floor][direction] = ORDER
 					case DELETE_ORDER:
 						mergedQueue[floor][direction] = EMPTY
-						break;
+						break directionLoop
 				}
 			}
 		}
