@@ -60,7 +60,7 @@ func TestMergeOrders(t *testing.T) {
 
 func TestCalcTotalCost(t *testing.T) {
 	var testData1 elevatorData
-	testData1.direction = UP
+	testData1.direction = DOWN
 	testData1.floor = 1
 	testData1.outsideOrders[2][1] = ORDER
 	testData1.outsideOrders[1][1] = ORDER

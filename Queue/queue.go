@@ -118,10 +118,40 @@ func CalcTotalCost(queueData elevatorData) int {
 			}
 			// The counter have to stop iterate when the last order occour
 			totalCost -= floorsSinceLastOrder
+
+			// HAVE TO RUN UPWARDS AGAIN, UNTIL YOU REACH THE FLOOR BENEATH YOUR CURRENT FLOOR
+
+			for floor := 0; floor < queueData.floor; floor ++{
+				// run upwards here and count similar to as you did 
+			}
 			return totalCost
 		
 		case DOWN:
-			// ...
+
+			for floor := queueData.floor; floor >= 0; floor-- {
+				totalCost += COST_FOR_MOVE
+				floorsSinceLastOrder += 1 
+				if queueData.outsideOrders[floor][1] == ORDER || queueData.insideOrders[floor] == ORDER {
+					totalCost += COST_FOR_ORDER
+					floorsSinceLastOrder = 0
+				}				
+			}
+
+			totalCost -= 2*COST_FOR_MOVE 
+			floorsSinceLastOrder -= 1 
+
+			for floor := 0; floor < FLOORS; floor ++ {
+				totalCost += COST_FOR_MOVE
+				floorsSinceLastOrder += 1
+				if queueData.outsideOrders[floor][0] == ORDER || (queueData.insideOrders[floor] == ORDER && floor > queueData.floor){
+					totalCost += COST_FOR_ORDER
+					floorsSinceLastOrder = 0
+				}				
+			}
+
+			totalCost -= floorsSinceLastOrder
+			return totalCost	
+
 		default: //Ta med IDLE?
 			// ...
 	}
@@ -141,9 +171,15 @@ func CalcTotalCostv2(queueData elevatorData) int {
 
 	switch queueData.direction {
 		case UP:
-			for floor := queueData.floor; floor < FLOORS; floor ++ {
-				totalCost += COST_FOR_MOVE
-			}
+
+			// PROCEDURE:
+			// RUN THROUGH ALL THE FLOORS UPWARDS, TURN AT THE TOP FLOOR AND RUN DOWNWARDS UNTIL 1ST FLOOR,
+			// RUN UPWARDS AGAIN UNTIL YOU REACH THE FLOOR BENEATH YOUR CURRENT FLOOR. COUNT #MOVEMENTS
+			// TO THE LAST ORDER
+
+			// for floor := queueData.floor; floor < FLOORS; floor ++ {
+			// 	totalCost += COST_FOR_MOVE // saa var det det problemet her igjen, da.. 
+			// }
 			// ...
 			break
 		case DOWN:
@@ -152,7 +188,8 @@ func CalcTotalCostv2(queueData elevatorData) int {
 		default:
 			// ...
 	}
-	//legg til alle 1-ere paa slutten her..
+	// Gaar det an aa legge forloop her, slik at case-ene kun setter hvordan man skal starte aa iterere?
+	// RUN THROUGH THE QUEUE AGAIN, AND COUNT ALL THE ORDERS. APPEND THE TOTALCOST
 
 	return totalCost;
 
