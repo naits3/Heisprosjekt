@@ -3,8 +3,8 @@ package io
 import "Heisprosjekt/driver"
 import "Heisprosjekt/source"
 import "runtime"
+import "fmt"
 
-//Command is shorten with command 
 type Commmad struct{
 	commandType int
 	floor 		int
@@ -47,8 +47,8 @@ func InitializeIo(chCommand chan Command, chButtonOrderToControl chan source.But
 	go pollFloorSensors(chFloorSensor)
 }
 
-func ioHandler(chCommand chan Command, chButtonOrderToControl chan source.ButtonOrder, chFloorSensor,
-				chButtonOrder chan source.ButtonOrder, chFloorSensor chan int){
+func ioHandler(chCommandFromControl chan Command, chButtonOrderToControl chan source.ButtonOrder,
+					chFloorSensorToControl chan int, chButtonOrder chan source.ButtonOrder, chFloorSensor chan int){
 	for{
 		select{
 			case order:=<- chButtonOrder:
