@@ -1,57 +1,107 @@
 package IO
 
+import "Heisprosjekt/driver"
+import "runtime"
+import"fmt"
 
-import "/driver"
+var N_FLOOR int
 
-func InitializeDriver(chController chan int){
-	//create all channels
-	//start thread pollUserOrders
-	//start thread pollFLoorSensors
-	//start thread driverHandler
-
-	chUserOrder := make(chan int)
-	
-	go driverHandler(chController)
-	go pollUserOrders(chUserOrder)
+//cmd is shorten with command 
+//TODO: Fix this struct to be more generical when it comes to commands
+type Cmd struct{
+	cmdType int
+	floor int
+	value int
+	buttonType int
 }
 
-func driverHandler(chController chan int){
+//TODO implement a order type whitch is formated by the formate functions
+
+const(
+	SET_BUTTON_LAMP		= iota
+	SET_MOTOR_DIR
+	SET_FLOOR_INDICATOR_LAMP 
+)
+
+func InitializeIo(chCmdCtrl chan Cmd, chCtrl chan int){
+	
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
+	N_FLOOR 		= driver.GetN_FLOOR()
+	chButtonOrder 	:= make(chan []int)
+	chFloorSensor  	:= make(chan int)
+	
+	if err:=driver.Init(); err<0{
+		fmt.Println("Could not initialize hardware")
+		//TODO Handle error, exit. Try one more time
+	}
+
+	go ioHandler(chCmdCtrl,chCtrl,chButtonOrder,chFloorSensor)	
+	go pollButtonOrders(chButtonOrder)
+	go pollFLoorSensors(chFloorSensor)
+}
+
+func ioHandler(chCmdCtrl chan Cmd, chCtrl chan int, chButtonOrder chan []int, chFloorSensor chan int){
 	for{
 		select{
-			case order := chUserOrder:
+			case <- chButtonOrder:
 				//format order
 				//send order
-				chController <- 1
+				chCtrl <- 1
 
-			case newFloor:= chArraivedFloor:
+			case <- chFloorSensor:
 				//format newFloor
 				//send newfloor
-				continue
-			case commandfromControl := chCommandFromControl:
-				//do what the command says
-				//define a protocol when we implement the control module
-				continue
+				chCtrl <- 2
+
+			case cmdCtrl := <- chCmdCtrl:
+				doCmd(cmdCtrl)
 		}
 	}
 }
 
-func pollUserOrders(chUserOrder chan int){
-//Loops over all order getfunctions in the C kode
-//Only button orders
-
-	i := 0
+func pollButtonOrders(chButtonOrder chan []int){
+	//TODO: Test funksjonen og fiks problemet med slices!!!
 	for{
-	 	i = 
-	 	if i==1 {
-	 		chUserOrder <-- 1
-	 		i = 0
-	 	}
+		for floor := 0; floor < N_FLOOR; floor++ {
+			
+			if(floor > 0 && driver.GetButtonSignal(driver.BUTTON_CALL_UP,floor)==1){
+				chButtonOrder <- []int{0,floor}
+			}
+			
+			if(floor < N_FLOOR-2 && driver.GetButtonSignal(driver.BUTTON_CALL_DOWN,floor)==1){
+				chButtonOrder <- []int{1,floor}
+			}
+			
+			if(driver.GetButtonSignal(driver.BUTTON_COMMAND,floor)==1){
+				chButtonOrder <- []int{2,floor}
+			}
+		}
 	}
 }
 
+func pollFLoorSensors(chFloorSensor chan int){
+	//TODO: Test funksjonen
+	for{	
+		if floor := driver.GetFloorSensor(); floor != -1{
+		chFloorSensor <- floor
+		}
+	}
+}
 
-func pollFLoorSensors(chanFloorSensor chan int){
-//Loops through all floor sensors and reads them
+func doCmd(cmdCtrl Cmd){
+	//TODO  Fiks enum problemet med typer.
+	if(SET_BUTTON_LAMP == cmdCtrl.cmdType){
+		driver.SetButtonLamp(1, cmdCtrl.floor, cmdCtrl.value)
+	}
+
+	if(SET_MOTOR_DIR == cmdCtrl.cmdType){
+		driver.SetMotorDir(1)
+	}
+
+	if(SET_FLOOR_INDICATOR_LAMP == cmdCtrl.cmdType){
+		driver.SetFloorIndicatorLamp(2)
+	}
 }
 
 func formatOrder(order int) int{
