@@ -9,6 +9,8 @@ package driver
 */
 import "C"
 
+
+
 type elev_button_type_t int
 type elev_motor_direction_t int
 
@@ -50,4 +52,8 @@ func SetButtonLamp(button elev_button_type_t, floor int, value int) {
 
 func SetDoorOpenLamp(value int) {
 	C.elev_set_door_open_lamp(C.int(value))
+}
+
+func GetN_FLOOR() int{
+	return 3
 }

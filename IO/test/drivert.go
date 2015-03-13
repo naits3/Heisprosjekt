@@ -1,9 +1,14 @@
 package main
 
-import "Heisprosjekt/IO/driver"
+import "Heisprosjekt/driver"
 import "time"
 import "fmt"
 import "runtime"
+
+type elev_button_type_t int
+type elev_motor_direction_t int
+
+
 
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
@@ -17,13 +22,13 @@ func main() {
 
 
 
-	go runElevator(done)
-    go floorsensor(done)
-    go buttonSignalUp(done)
-	go buttonSignalDown(done)
-	go buttonSignalInside(done)
+	// go runElevator(done)
+ //    go floorsensor()
+ //    go buttonSignalUp(done)
+	// go buttonSignalDown(done)
+	//go buttonSignalInside(done)
 	go setButtonLamp()
-	go setFloorIndicatorLamp()
+	// go setFloorIndicatorLamp()
 
 	<-done
 	<-done
@@ -50,7 +55,7 @@ func floorsensor(){
 func buttonSignalUp(done chan bool){
 	floor_nr := 0
 	for{
-		if(driver.GetButtonSignal(0,floor_nr)==1){
+		if(driver.GetButtonSignal(driver.BUTTON_CALL_UP,floor_nr)==1){
 			fmt.Println("Button is pushed up on floor ",floor_nr)
 			floor_nr = floor_nr + 1
 			if(floor_nr==3){
@@ -65,7 +70,7 @@ func buttonSignalUp(done chan bool){
 func buttonSignalDown(done chan bool){
 	floor_nr := 1
 	for{
-		if(driver.GetButtonSignal(1,floor_nr)==1){
+		if(driver.GetButtonSignal(driver.BUTTON_CALL_DOWN,floor_nr)==1){
 			fmt.Println("Button is pushed down on floor ",floor_nr)
 			floor_nr = floor_nr + 1
 			if(floor_nr==4){
@@ -80,7 +85,7 @@ func buttonSignalDown(done chan bool){
 func buttonSignalInside(done chan bool){
 	floor_nr := 0
 	for{
-		if(driver.GetButtonSignal(2,floor_nr)==1){
+		if(driver.GetButtonSignal(driver.BUTTON_COMMAND,floor_nr)==1){
 			fmt.Println("Button is pushed inside for floor ",floor_nr)
 			floor_nr = floor_nr + 1
 			if(floor_nr==4){
@@ -93,17 +98,24 @@ func buttonSignalInside(done chan bool){
 }
 
 func setButtonLamp(){
-	driver.SetButtonLamp(0,0,1)
-	driver.SetButtonLamp(0,1,1)
-	driver.SetButtonLamp(0,2,1)
-	driver.SetButtonLamp(1,1,1)
-	driver.SetButtonLamp(1,2,1)
-	driver.SetButtonLamp(1,3,1)
+	driver.SetButtonLamp(driver.BUTTON_CALL_UP,0,1)
+	driver.SetButtonLamp(driver.BUTTON_CALL_UP,1,1)
+	driver.SetButtonLamp(driver.BUTTON_CALL_UP,2,1)
+	driver.SetButtonLamp(driver.BUTTON_CALL_DOWN,1,1)
+	driver.SetButtonLamp(driver.BUTTON_CALL_DOWN,2,1)
+	driver.SetButtonLamp(driver.BUTTON_CALL_DOWN,3,1)
+	driver.SetButtonLamp(driver.BUTTON_COMMAND,0,1)
+	driver.SetButtonLamp(driver.BUTTON_COMMAND,1,1)
+	driver.SetButtonLamp(driver.BUTTON_COMMAND,2,1)
+	driver.SetButtonLamp(driver.BUTTON_COMMAND,3,1)
 }
 
 func setFloorIndicatorLamp(){
 	driver.SetFloorIndicatorLamp(0)
+	time.Sleep(time.Second)
 	driver.SetFloorIndicatorLamp(1)
+	time.Sleep(time.Second)
 	driver.SetFloorIndicatorLamp(2)
+	time.Sleep(time.Second)
 	driver.SetFloorIndicatorLamp(3)
 }
