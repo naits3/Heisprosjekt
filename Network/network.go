@@ -1,10 +1,9 @@
-package main
+package Network
 
 import (
 	"net"
 	"strings"
-	"time"
-	//"fmt"
+	//"time"
 )
 
 const FLOORS = 4
@@ -20,96 +19,45 @@ type elevatorData struct {
 	insideOrders  [FLOORS]int
 }
 
-// conn is connection
-
-func InitConnModule(){
-	//init all channels
-	//Create broadcast connection
-	//Thread connDurationHandler()
-	//Thread listenPing()
-	// Thread sendPing()
-}
-
-func addConn(ip string){
-	//adds a connection to map with ip as key
-}
-
-func removeConn(ip string){
-	//remove conn from map with ip string
-}
-
-func GetConnMap() {
-	// -- RETURNS map[string]net.Conn --
-	// Sender alle TCP til kommunikasjonskontroll
-	// Må ha variable kontroll med addConn.. og deleteConn..
-}
 
 func sendPing(udpConn net.Conn){
-	message := "I AM ALIVE"
-	timeDur := 500*time.Millisecond
 	
-	for _ = range time.Tick(timeDur){
-		udpConn.Write([]byte(message)) // Send JSON-melding her
-	}
 }
 
-// func listenPing(port string, chListenPing chan string, quit chan bool) string{
-// 	addr, err := net.ResolveUDPAddr("udp","3000")
-// 	if err != nil{return "0"} // Handle error
-// 	conn, err := net.ListenUDP("udp", addr)
-// 	if err != nil{return "0"} // Handle error
 
-// 	var buffer []byte = make([]byte, 1500)
-	
-// 	for{
-// 		select {
-// 		case <- quit:
-// 			conn.Close()
-// 			return "hade"
-// 		default:
-// 			_, senderAddr, err := conn.ReadFromUDP(buffer)
-// 			if err != nil{return "0"} // Handle error
-// 			chListenPing <- senderAddr.String()
-// 		}
-// 	}
-
-// 	// listning for broadcast signals
-// 	// if valid signal send to connDurationHandler
-// }
-
-func listenPing(broadcastConn net.Conn, chQueueFromElevator chan []byte){
+//TESTED:
+// - need to test with multiple clients
+func listenPing(chReceivedData chan []byte, chReceivedIPaddress chan string){
 	UDPAddr, _ := net.ResolveUDPAddr("udp",":"+PORT)
 	var buffer []byte = make([]byte, 1024)
+	conn, err := net.ListenUDP("udp", UDPAddr)
+
+	if err != nil {
+			print(err)
+			return
+		}
+
+	defer conn.Close()
 
 	for {
-		
-		conn, err := net.ListenUDP("udp", UDPAddr)
-		lengthOfMessage, err := conn.Read(buffer)
+
+		lengthOfMessage, IPaddressAndPort, err := conn.ReadFromUDP(buffer)
 		if err != nil {
-			return // handle error
+			print(err)
+			return
 		}
-		chQueueFromElevator <- buffer[:lengthOfMessage]
+
+		IPaddressAndPortArray := strings.Split(IPaddressAndPort.String(),":")
+		IPaddress := IPaddressAndPortArray[0]
+		
+		chReceivedIPaddress <- IPaddress
+		chReceivedData <- buffer[:lengthOfMessage]
 	}
 }
 
-func connDurationHandler(){
-	// start new timer for 1 sec
-	// Get all keys
-	// for{
-	// 	select{
-	// 	case time:=<-Timer:
-	// 		//check if the list are empty, if not remove ip from map
-	// 		//start new timer for 1 sec
-	// 	//case: //gets ip string from listenPing() channel
-	// 		//check if it is in map
-	// 		//if in map remove from list
-	// 		//if not in map add new connection to map
 
-	// 	}
-	//}
-}
-
-func createBroadcastConn() net.Conn{ // SKAL VÆRE MED
+// TESTED:
+func createBroadcastConn() *net.UDPConn{
 	broadcastIP := getBroadcastIP()
 	UDPAddr, err := net.ResolveUDPAddr("udp",broadcastIP + ":" + PORT)
 
@@ -119,11 +67,8 @@ func createBroadcastConn() net.Conn{ // SKAL VÆRE MED
 
 }
 
-func GetPort() string{
-	return PORT
-}
-
-func getBroadcastIP() string{  // SKAL VÆRE MED
+// TESTED: 
+func getBroadcastIP() string{
 	ifaces, _ := net.Interfaces()
 	// handle err
 	for _, i := range ifaces {
@@ -143,22 +88,4 @@ func getBroadcastIP() string{  // SKAL VÆRE MED
 	    }
 	}
 	return "is_offline" // EDIT THIS?
-}
-
-
-func main(){
-// 	chListenPing := make(chan string) // Buffersize?
-// 	chQuit := make(chan bool)
-
-// 	//go listenPing(, chListenPing, chQuit)
-
-// 	for {
-// 		select {
-// 			case elevatorAddr := <- chListenPing:
-// 				println(elevatorAddr)
-
-// 			case <- time.After(time.Second):
-// 				println("Time's up moddafucka")
-// 		}
-// 	}	
 }

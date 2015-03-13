@@ -1,29 +1,39 @@
-package network
+package Network
 
-import("testing")
+import (
+	"testing"
+	"time"
+)
 
+func TestGetIP(t *testing.T) {
+	ip := getBroadcastIP()
+	println(ip)
+	
+}
 
-func TestGetHostIP(t *testing.T){
-	// legg til ip for hosten
-	ip_answer := "192.168.1.135"
-	ip := GetHostIP()
-	if(ip_answer != ip && ip != "is_offline"){
-		t.Error("Got ip: "+ip)
+func TestBroadcastConn(t *testing.T){
+	connection := createBroadcastConn()
+
+	for {
+		time.Sleep(time.Second)
+		n, _ := connection.Write([]byte("IAM"))
+		println(n)
 	}
 }
 
-// func TestInitNetwork(t *testing.T){
-// 	ip := "192.168.1"
-// 	//Tester intialize 
-// 	//-finne den lokale ip-addressen
-// 	//-skal legge inn en broadcastadresse inn i dictonary
-// 	//-skal leggge til
-// 	//-Skal få inn en liste med alle TCP connections som er mulig og koble til.
 
+func TestListenPing(t *testing.T) {
+	chPing := make(chan []byte)
+	chAddress := make(chan string)
+	
+	go listenPing(chPing, chAddress)
 
-// }	
-
-// func TestPing(t* testing){
-// 	//Testen fjerner en fra lista  
-// }
-
+	for {
+		select {
+			case data := <- chPing:
+				println(string(data))
+			case addr := <- chAddress:
+				println("address: ",addr)
+		}
+	}
+}
