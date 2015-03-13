@@ -1,4 +1,4 @@
-package IO
+package io
 
 import "Heisprosjekt/driver"
 import "runtime"
@@ -16,11 +16,11 @@ type Cmd struct{
 }
 
 //TODO implement a order type whitch is formated by the formate functions
-
+		
 const(
-	SET_BUTTON_LAMP		= iota
-	SET_MOTOR_DIR
-	SET_FLOOR_INDICATOR_LAMP 
+	SET_BUTTON_LAMP				= 0
+	SET_MOTOR_DIR				= 1
+	SET_FLOOR_INDICATOR_LAMP	= 2
 )
 
 func InitializeIo(chCmdCtrl chan Cmd, chCtrl chan int){
@@ -28,7 +28,7 @@ func InitializeIo(chCmdCtrl chan Cmd, chCtrl chan int){
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	N_FLOOR 		= driver.GetN_FLOOR()
-	chButtonOrder 	:= make(chan []int)
+	chButtonPressed := make(chan []int)
 	chFloorSensor  	:= make(chan int)
 	
 	if err:=driver.Init(); err<0{
@@ -36,15 +36,17 @@ func InitializeIo(chCmdCtrl chan Cmd, chCtrl chan int){
 		//TODO Handle error, exit. Try one more time
 	}
 
-	go ioHandler(chCmdCtrl,chCtrl,chButtonOrder,chFloorSensor)	
-	go pollButtonOrders(chButtonOrder)
+	go ioHandler(chCmdCtrl,chCtrl,chButtonPressed,chFloorSensor)
+
+	go pollButtonOrders(chButtonPressed)
+
 	go pollFLoorSensors(chFloorSensor)
 }
 
-func ioHandler(chCmdCtrl chan Cmd, chCtrl chan int, chButtonOrder chan []int, chFloorSensor chan int){
+func ioHandler(chCmdCtrl chan Cmd, chCtrl chan int, chButtonPressed chan []int, chFloorSensor chan int){
 	for{
 		select{
-			case <- chButtonOrder:
+			case <- chButtonPressed:
 				//format order
 				//send order
 				chCtrl <- 1
@@ -60,21 +62,21 @@ func ioHandler(chCmdCtrl chan Cmd, chCtrl chan int, chButtonOrder chan []int, ch
 	}
 }
 
-func pollButtonOrders(chButtonOrder chan []int){
+func pollButtonOrders(chButtonPressed chan []int){
 	//TODO: Test funksjonen og fiks problemet med slices!!!
 	for{
 		for floor := 0; floor < N_FLOOR; floor++ {
 			
 			if(floor > 0 && driver.GetButtonSignal(driver.BUTTON_CALL_UP,floor)==1){
-				chButtonOrder <- []int{0,floor}
+				chButtonPressed <- []int{0,floor}
 			}
 			
 			if(floor < N_FLOOR-2 && driver.GetButtonSignal(driver.BUTTON_CALL_DOWN,floor)==1){
-				chButtonOrder <- []int{1,floor}
+				chButtonPressed <- []int{1,floor}
 			}
 			
 			if(driver.GetButtonSignal(driver.BUTTON_COMMAND,floor)==1){
-				chButtonOrder <- []int{2,floor}
+				chButtonPressed <- []int{2,floor}
 			}
 		}
 	}
@@ -102,6 +104,7 @@ func doCmd(cmdCtrl Cmd){
 	if(SET_FLOOR_INDICATOR_LAMP == cmdCtrl.cmdType){
 		driver.SetFloorIndicatorLamp(2)
 	}
+	//implement SetDoorOpenLamp
 }
 
 func formatOrder(order int) int{

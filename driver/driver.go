@@ -8,23 +8,8 @@ package driver
 #include "elev.h"
 */
 import "C"
+import "source"
 
-
-
-type elev_button_type_t int
-type elev_motor_direction_t int
-
-const (
-	BUTTON_CALL_UP elev_button_type_t = iota
-	BUTTON_CALL_DOWN
-	BUTTON_COMMAND
-)
-
-const (
-	DIRN_DOWN elev_motor_direction_t = -1
-	DIRN_STOP                        = 0
-	DRIN_UP                          = 1
-)
 
 func Init() int {
 	return int(C.elev_init())
@@ -52,8 +37,4 @@ func SetButtonLamp(button elev_button_type_t, floor int, value int) {
 
 func SetDoorOpenLamp(value int) {
 	C.elev_set_door_open_lamp(C.int(value))
-}
-
-func GetN_FLOOR() int{
-	return 3
 }

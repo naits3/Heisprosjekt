@@ -37,9 +37,9 @@ func main() {
 }
 
 func runElevator(done chan bool){
-		driver.SetMotorDir(1)
+		driver.SetMotorDir(driver.DIRN_UP)
 		time.Sleep(1*time.Second)
-		driver.SetMotorDir(0)
+		driver.SetMotorDir(driver.DIRN.STOP)
 		done <- true
 }
 
