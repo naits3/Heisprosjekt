@@ -98,16 +98,16 @@ func buttonSignalInside(done chan bool){
 }
 
 func setButtonLamp(){
-	driver.SetButtonLamp(driver.BUTTON_CALL_UP,0,1)
-	driver.SetButtonLamp(driver.BUTTON_CALL_UP,1,1)
-	driver.SetButtonLamp(driver.BUTTON_CALL_UP,2,1)
-	driver.SetButtonLamp(driver.BUTTON_CALL_DOWN,1,1)
-	driver.SetButtonLamp(driver.BUTTON_CALL_DOWN,2,1)
-	driver.SetButtonLamp(driver.BUTTON_CALL_DOWN,3,1)
-	driver.SetButtonLamp(driver.BUTTON_COMMAND,0,1)
-	driver.SetButtonLamp(driver.BUTTON_COMMAND,1,1)
-	driver.SetButtonLamp(driver.BUTTON_COMMAND,2,1)
-	driver.SetButtonLamp(driver.BUTTON_COMMAND,3,1)
+	driver.SetButtonLamp(driver.BUTTON_UP,0,1)
+	driver.SetButtonLamp(driver.BUTTON_UP,1,1)
+	driver.SetButtonLamp(driver.BUTTON_UP,2,1)
+	driver.SetButtonLamp(driver.BUTTON_DOWN,1,1)
+	driver.SetButtonLamp(driver.BUTTON_DOWN,2,1)
+	driver.SetButtonLamp(driver.BUTTON_DOWN,3,1)
+	driver.SetButtonLamp(driver.BUTTON_INSIDE,0,1)
+	driver.SetButtonLamp(driver.BUTTON_INSIDE,1,1)
+	driver.SetButtonLamp(driver.BUTTON_INSIDE,2,1)
+	driver.SetButtonLamp(driver.BUTTON_INSIDE,3,1)
 }
 
 func setFloorIndicatorLamp(){

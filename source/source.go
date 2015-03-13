@@ -9,16 +9,16 @@ const(
 )
 	
 const(
-	DIRN_DOWN 	 = -1
-	DIRN_STOP    = 0
-	DIRN_UP      = 1
+	DIR_DOWN 	= -1
+	DIR_STOP    =  0
+	DIR_UP      =  1
 )
 
-type Order struct{
+
+type ButtonOrder struct{
 	floor 		int
 	ButtonType 	int 
 }
-
 
 func GetNFloors() int{
 	return n_floors

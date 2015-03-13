@@ -3,6 +3,7 @@ package main
 import "Heisprosjekt/driver"
 import "time"
 import "fmt"
+import "Heisprosjekt/source"
 
 func main() {
 	
@@ -11,8 +12,7 @@ func main() {
 		fmt.Println("Could not initialize hardware")
 	}
 
-	driver.SetMotorDir(1)
+	driver.SetMotorDir(source.DIR_UP)
 	time.Sleep(1*time.Second)
-	driver.SetMotorDir(0)
-
+	driver.SetMotorDir(source.DIR_STOP)
 }

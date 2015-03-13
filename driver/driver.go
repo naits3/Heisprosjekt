@@ -8,14 +8,12 @@ package driver
 #include "elev.h"
 */
 import "C"
-import "source"
-
 
 func Init() int {
 	return int(C.elev_init())
 }
 
-func SetMotorDir(dirn elev_motor_direction_t) {
+func SetMotorDir(dirn int) {
 	C.elev_set_motor_direction(C.elev_motor_direction_t(dirn))
 }
 
@@ -23,7 +21,7 @@ func GetFloorSensor() int {
 	return int(C.elev_get_floor_sensor_signal())
 }
 
-func GetButtonSignal(button elev_button_type_t, floor int) int {
+func GetButtonSignal(button int, floor int) int {
 	return int(C.elev_get_button_signal(C.elev_button_type_t(button), C.int(floor)))
 }
 
@@ -31,7 +29,7 @@ func SetFloorIndicatorLamp(floor int) {
 	C.elev_set_floor_indicator(C.int(floor))
 }
 
-func SetButtonLamp(button elev_button_type_t, floor int, value int) {
+func SetButtonLamp(button int, floor int, value int) {
 	C.elev_set_button_lamp(C.elev_button_type_t(button), C.int(floor), C.int(value))
 }
 
