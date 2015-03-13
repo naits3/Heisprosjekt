@@ -9,7 +9,7 @@ type elevatorData struct {
 	insideOrders  [FLOORS]int
 }
 
-type Order struct {	// THis struct should be imported from styring / IO!
+type Order struct {	// THis struct should be imported from styring 
 	floor 			int
 	buttonType		int
 }	
@@ -20,11 +20,13 @@ const (
 	DELETE_ORDER = -1
 )
 
-const (
+const ( //Importer fra styring
 	UP = 1
 	IDLE = 0
 	DOWN = -1
 )
+
+
 
 
 const FLOORS = 4 //Import from Styring!
@@ -103,10 +105,7 @@ func CalcTotalCost(queueData elevatorData) int {
 				}				
 			}
 
-			totalCost -= 2*COST_FOR_MOVE 
 			floorsSinceLastOrder -= 1 
-			// They are decremented because of the duplicated increment occouring in the first iteration
-			// in the next forloop. 
 
 			for floor := FLOORS-1; floor >= 0; floor-- {
 				totalCost += COST_FOR_MOVE
@@ -116,14 +115,20 @@ func CalcTotalCost(queueData elevatorData) int {
 					floorsSinceLastOrder = 0
 				}				
 			}
-			// The counter have to stop iterate when the last order occour
-			totalCost -= floorsSinceLastOrder
-
-			// HAVE TO RUN UPWARDS AGAIN, UNTIL YOU REACH THE FLOOR BENEATH YOUR CURRENT FLOOR
+			
+			floorsSinceLastOrder -= 1
 
 			for floor := 0; floor < queueData.floor; floor ++{
-				// run upwards here and count similar to as you did 
+				totalCost += COST_FOR_MOVE
+				floorsSinceLastOrder += 1
+				if queueData.outsideOrders[floor][0] == ORDER {
+					totalCost  += COST_FOR_ORDER
+					floorsSinceLastOrder = 0
+				}
 			}
+
+			totalCost -= 3*COST_FOR_MOVE // 1 when we start, and 1 when we change dir * 2
+			totalCost -= floorsSinceLastOrder
 			return totalCost
 		
 		case DOWN:
@@ -136,8 +141,7 @@ func CalcTotalCost(queueData elevatorData) int {
 					floorsSinceLastOrder = 0
 				}				
 			}
-
-			totalCost -= 2*COST_FOR_MOVE 
+ 
 			floorsSinceLastOrder -= 1 
 
 			for floor := 0; floor < FLOORS; floor ++ {
@@ -149,6 +153,18 @@ func CalcTotalCost(queueData elevatorData) int {
 				}				
 			}
 
+			floorsSinceLastOrder -= 1
+
+			for floor := FLOORS-1; floor > queueData.floor; floor --{
+				totalCost += COST_FOR_MOVE
+				floorsSinceLastOrder += 1
+				if queueData.outsideOrders[floor][1] == ORDER {
+					totalCost  += COST_FOR_ORDER
+					floorsSinceLastOrder = 0
+				}
+			}
+
+			totalCost -= 3*COST_FOR_MOVE // 1 when we start, and 1 when we change dir * 2
 			totalCost -= floorsSinceLastOrder
 			return totalCost	
 

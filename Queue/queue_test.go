@@ -65,10 +65,16 @@ func TestCalcTotalCost(t *testing.T) {
 	testData1.outsideOrders[2][1] = ORDER
 	testData1.outsideOrders[1][1] = ORDER
 	testData1.outsideOrders[1][0] = ORDER
-	testData1.insideOrders[1] = ORDER
+	//testData1.insideOrders[1] = ORDER
 
 	printQueue(testData1)
 
 	cost := CalcTotalCost(testData1)
 	println(cost)
+
+	expect := 13
+	if cost != expect {
+		t.Error("expected", expect, "got", cost)
+	} 
+
 }
