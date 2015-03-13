@@ -3,6 +3,7 @@
 package Queue//package Queue
 
 type elevatorData struct { 
+	IP 				int
 	floor 			int
 	direction 		int
 	outsideOrders [FLOORS][2]int
@@ -61,16 +62,17 @@ func MergeOrders(queueList []elevatorData) elevatorData {
 }
 
 func AssignOrders(queueList []elevatorData, mergedQueue elevatorData) int { // return elevatorData
+	var costArray = []int
 	//queueList = globalQueues + localQueue
 	for floor := 0; floor < FLOORS; floor ++ {
 		for direction := 0; direction < 2; direction ++ {
 			
 			if mergedQueue.outsideOrders[floor][direction] == ORDER {
 				for eachElevator := 0; eachElevator < len(queueList); eachElevator ++{
-					CalcTotalCost(queueList[eachElevator])
+					costArray = append(costArray, CalcTotalCost(queueList[eachElevator]))
 				}
 				//minst totalCost faar ordren
-				//Hvilke tall skal vi bruke for aa gi unik ID til hver heis?
+				//Hvilke tall skal vi bruke for aa gi unik ID til hver heis? Trenger vel ikke det?
 				// 1 er jo ORDER!
 			}
 		}
@@ -99,7 +101,7 @@ func CalcTotalCost(queueData elevatorData) int {
 			for floor := queueData.floor; floor < FLOORS; floor ++ {
 				totalCost += COST_FOR_MOVE
 				floorsSinceLastOrder += 1
-				if queueData.outsideOrders[floor][0] == ORDER || queueData.insideOrders[floor] == ORDER{
+				if queueData.outsideOrders[floor][0] == (ORDER || queueData.IP) || queueData.insideOrders[floor] == (ORDER || queueData.IP){
 					totalCost += COST_FOR_ORDER
 					floorsSinceLastOrder = 0
 				}				
@@ -110,7 +112,7 @@ func CalcTotalCost(queueData elevatorData) int {
 			for floor := FLOORS-1; floor >= 0; floor-- {
 				totalCost += COST_FOR_MOVE
 				floorsSinceLastOrder += 1 
-				if queueData.outsideOrders[floor][1] == ORDER || (queueData.insideOrders[floor] == ORDER && floor < queueData.floor){
+				if queueData.outsideOrders[floor][1] == (ORDER || queueData.IP) || (queueData.insideOrders[floor] == (ORDER || queueData.IP) && floor < queueData.floor){
 					totalCost += COST_FOR_ORDER
 					floorsSinceLastOrder = 0
 				}				
@@ -121,7 +123,7 @@ func CalcTotalCost(queueData elevatorData) int {
 			for floor := 0; floor < queueData.floor; floor ++{
 				totalCost += COST_FOR_MOVE
 				floorsSinceLastOrder += 1
-				if queueData.outsideOrders[floor][0] == ORDER {
+				if queueData.outsideOrders[floor][0] == (ORDER || queueData.IP) {
 					totalCost  += COST_FOR_ORDER
 					floorsSinceLastOrder = 0
 				}
@@ -136,7 +138,7 @@ func CalcTotalCost(queueData elevatorData) int {
 			for floor := queueData.floor; floor >= 0; floor-- {
 				totalCost += COST_FOR_MOVE
 				floorsSinceLastOrder += 1 
-				if queueData.outsideOrders[floor][1] == ORDER || queueData.insideOrders[floor] == ORDER {
+				if queueData.outsideOrders[floor][1] == (ORDER || queueData.IP) || queueData.insideOrders[floor] == (ORDER || queueData.IP) {
 					totalCost += COST_FOR_ORDER
 					floorsSinceLastOrder = 0
 				}				
@@ -147,7 +149,7 @@ func CalcTotalCost(queueData elevatorData) int {
 			for floor := 0; floor < FLOORS; floor ++ {
 				totalCost += COST_FOR_MOVE
 				floorsSinceLastOrder += 1
-				if queueData.outsideOrders[floor][0] == ORDER || (queueData.insideOrders[floor] == ORDER && floor > queueData.floor){
+				if queueData.outsideOrders[floor][0] == (ORDER || queueData.IP) || (queueData.insideOrders[floor] == (ORDER || queueData.IP) && floor > queueData.floor){
 					totalCost += COST_FOR_ORDER
 					floorsSinceLastOrder = 0
 				}				
@@ -158,7 +160,7 @@ func CalcTotalCost(queueData elevatorData) int {
 			for floor := FLOORS-1; floor > queueData.floor; floor --{
 				totalCost += COST_FOR_MOVE
 				floorsSinceLastOrder += 1
-				if queueData.outsideOrders[floor][1] == ORDER {
+				if queueData.outsideOrders[floor][1] == (ORDER || queueData.IP) {
 					totalCost  += COST_FOR_ORDER
 					floorsSinceLastOrder = 0
 				}
@@ -177,39 +179,7 @@ func CalcTotalCost(queueData elevatorData) int {
 	return 0;
 }
 
-func CalcTotalCostv2(queueData elevatorData) int {
-	// Proever ut idéen om aa telle oppover eller nedover helt til man finner siste 1-er, og deretter legger til
-	// antall 1-ere
-	const COST_FOR_ORDER = 3
-	const COST_FOR_MOVE = 1
-	totalCost := 0
-	//floorsSinceLastOrder := 0
 
-	switch queueData.direction {
-		case UP:
-
-			// PROCEDURE:
-			// RUN THROUGH ALL THE FLOORS UPWARDS, TURN AT THE TOP FLOOR AND RUN DOWNWARDS UNTIL 1ST FLOOR,
-			// RUN UPWARDS AGAIN UNTIL YOU REACH THE FLOOR BENEATH YOUR CURRENT FLOOR. COUNT #MOVEMENTS
-			// TO THE LAST ORDER
-
-			// for floor := queueData.floor; floor < FLOORS; floor ++ {
-			// 	totalCost += COST_FOR_MOVE // saa var det det problemet her igjen, da.. 
-			// }
-			// ...
-			break
-		case DOWN:
-			// ...
-			break
-		default:
-			// ...
-	}
-	// Gaar det an aa legge forloop her, slik at case-ene kun setter hvordan man skal starte aa iterere?
-	// RUN THROUGH THE QUEUE AGAIN, AND COUNT ALL THE ORDERS. APPEND THE TOTALCOST
-
-	return totalCost;
-
-}
 
 func calcNextFloor() {
 
