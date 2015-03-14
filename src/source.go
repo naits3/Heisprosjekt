@@ -1,6 +1,6 @@
 package src
 
-const n_floors = 4
+const N_FLOORS = 4
 
 const(
 	BUTTON_UP 		= 0
@@ -14,19 +14,15 @@ const(
 	DIR_UP      =  1
 )
 
-
 type ButtonOrder struct{
-	floor 		int
+	Floor 		int
 	ButtonType 	int 
 }
 
-func GetNFloors() int{
-	return n_floors
+type ElevatorData struct {
+	Floor 			int
+	Direction 		int
+	OutsideOrders [N_FLOORS][2]int
+	InsideOrders  [N_FLOORS]int
 }
 
-type ElevatorData struct {
-	floor 			int
-	direction 		int
-	outsideOrders [n_floors][2]int
-	insideOrders  [n_floors]int
-}

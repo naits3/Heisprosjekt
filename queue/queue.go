@@ -2,18 +2,10 @@
 
 package queue//package Queue
 
-type elevatorData struct { 
-	IP 				int
-	floor 			int
-	direction 		int
-	outsideOrders [FLOORS][2]int
-	insideOrders  [FLOORS]int
-}
-
-type Order struct {	// THis struct should be imported from styring 
-	floor 			int
-	buttonType		int
-}	
+import (
+	"Heisprosjekt/src"
+	"Heisprosjekt/network"
+)
 
 const (
 	ORDER = 1
@@ -21,32 +13,25 @@ const (
 	DELETE_ORDER = -1
 )
 
-const ( //Importer fra styring
-	UP = 1
-	IDLE = 0
-	DOWN = -1
-)
+var localQueue     	src.ElevatorData
+var listOfIncomingData  []src.ElevatorData
+
+// Channels made for communication across modules
 
 
 
-
-const FLOORS = 4 //Import from Styring!
-var localQueue     	elevatorData
-var globalQueues  []elevatorData
-
-
-func MergeOrders(queueList []elevatorData) elevatorData {
+func mergeOrders(queueList []src.ElevatorData) src.ElevatorData {
 	//Go through list, append orders. Remove if orders are finished
 	//Remember to add your own global list as well
-	var mergedData elevatorData
-	var mergedQueue [FLOORS][2]int	
+	var mergedData src.ElevatorData
+	var mergedQueue [src.N_FLOORS][2]int	
 
-	for floor := 0; floor < FLOORS; floor ++ {
+	for floor := 0; floor < src.N_FLOORS; floor ++ {
 		directionLoop:	
 		for direction := 0; direction < 2; direction ++ {
 			
 			for eachQueue := 0; eachQueue < len(queueList); eachQueue ++ {
-				switch queueList[eachQueue].outsideOrders[floor][direction] {
+				switch queueList[eachQueue].OutsideOrders[floor][direction] {
 					case ORDER:
 						mergedQueue[floor][direction] = ORDER
 					case DELETE_ORDER:
@@ -57,19 +42,19 @@ func MergeOrders(queueList []elevatorData) elevatorData {
 		}
 	}
 
-	mergedData.outsideOrders = mergedQueue
+	mergedData.OutsideOrders = mergedQueue
 	return mergedData
 }
 
-func AssignOrders(queueList []elevatorData, mergedQueue elevatorData) int { // return elevatorData
-	var costArray = []int
+func assignOrders(queueList []src.ElevatorData, mergedQueue src.ElevatorData) int { // return elevatorData
+	var costArray []int
 	//queueList = globalQueues + localQueue
-	for floor := 0; floor < FLOORS; floor ++ {
+	for floor := 0; floor < src.N_FLOORS; floor ++ {
 		for direction := 0; direction < 2; direction ++ {
 			
-			if mergedQueue.outsideOrders[floor][direction] == ORDER {
+			if mergedQueue.OutsideOrders[floor][direction] == ORDER {
 				for eachElevator := 0; eachElevator < len(queueList); eachElevator ++{
-					costArray = append(costArray, CalcTotalCost(queueList[eachElevator]))
+					costArray = append(costArray, calcTotalCost(queueList[eachElevator]))
 				}
 				//minst totalCost faar ordren
 				//Hvilke tall skal vi bruke for aa gi unik ID til hver heis? Trenger vel ikke det?
@@ -82,26 +67,26 @@ func AssignOrders(queueList []elevatorData, mergedQueue elevatorData) int { // r
 
 }
 
-func CalcTotalCost(queueData elevatorData) int {
+func calcTotalCost(queueData src.ElevatorData) int {
 	const COST_FOR_ORDER = 3
 	const COST_FOR_MOVE = 1
 	totalCost := 0
 	floorsSinceLastOrder := 0
 
 	// remove "illegal states" here?
-	// i.e dir = UP & floor = 4
-	// and dir = DOWN & floor = 0
+	// i.e dir = DIR_UP & floor = 4
+	// and dir = src.DIR_DOWN & floor = 0
 
 	// IDE:
 	// Kan man gjoere det saa enkelt at man teller oppover og nedover helt til man finner siste 1-er
 	// Deretter teller antall 1-ere?
-	switch queueData.direction {
-		case UP:
+	switch queueData.Direction {
+		case src.DIR_UP:
 
-			for floor := queueData.floor; floor < FLOORS; floor ++ {
+			for floor := queueData.Floor; floor < src.N_FLOORS; floor ++ {
 				totalCost += COST_FOR_MOVE
 				floorsSinceLastOrder += 1
-				if queueData.outsideOrders[floor][0] == (ORDER || queueData.IP) || queueData.insideOrders[floor] == (ORDER || queueData.IP){
+				if queueData.OutsideOrders[floor][0] == ORDER || queueData.InsideOrders[floor] == ORDER {
 					totalCost += COST_FOR_ORDER
 					floorsSinceLastOrder = 0
 				}				
@@ -109,10 +94,10 @@ func CalcTotalCost(queueData elevatorData) int {
 
 			floorsSinceLastOrder -= 1 
 
-			for floor := FLOORS-1; floor >= 0; floor-- {
+			for floor := src.N_FLOORS-1; floor >= 0; floor-- {
 				totalCost += COST_FOR_MOVE
 				floorsSinceLastOrder += 1 
-				if queueData.outsideOrders[floor][1] == (ORDER || queueData.IP) || (queueData.insideOrders[floor] == (ORDER || queueData.IP) && floor < queueData.floor){
+				if queueData.OutsideOrders[floor][1] == ORDER || (queueData.InsideOrders[floor] == ORDER  && floor < queueData.Floor){
 					totalCost += COST_FOR_ORDER
 					floorsSinceLastOrder = 0
 				}				
@@ -120,10 +105,10 @@ func CalcTotalCost(queueData elevatorData) int {
 			
 			floorsSinceLastOrder -= 1
 
-			for floor := 0; floor < queueData.floor; floor ++{
+			for floor := 0; floor < queueData.Floor; floor ++{
 				totalCost += COST_FOR_MOVE
 				floorsSinceLastOrder += 1
-				if queueData.outsideOrders[floor][0] == (ORDER || queueData.IP) {
+				if queueData.OutsideOrders[floor][0] == ORDER {
 					totalCost  += COST_FOR_ORDER
 					floorsSinceLastOrder = 0
 				}
@@ -133,12 +118,12 @@ func CalcTotalCost(queueData elevatorData) int {
 			totalCost -= floorsSinceLastOrder
 			return totalCost
 		
-		case DOWN:
+		case src.DIR_DOWN:
 
-			for floor := queueData.floor; floor >= 0; floor-- {
+			for floor := queueData.Floor; floor >= 0; floor-- {
 				totalCost += COST_FOR_MOVE
 				floorsSinceLastOrder += 1 
-				if queueData.outsideOrders[floor][1] == (ORDER || queueData.IP) || queueData.insideOrders[floor] == (ORDER || queueData.IP) {
+				if queueData.OutsideOrders[floor][1] == ORDER || queueData.InsideOrders[floor] == ORDER  {
 					totalCost += COST_FOR_ORDER
 					floorsSinceLastOrder = 0
 				}				
@@ -146,10 +131,10 @@ func CalcTotalCost(queueData elevatorData) int {
  
 			floorsSinceLastOrder -= 1 
 
-			for floor := 0; floor < FLOORS; floor ++ {
+			for floor := 0; floor < src.N_FLOORS; floor ++ {
 				totalCost += COST_FOR_MOVE
 				floorsSinceLastOrder += 1
-				if queueData.outsideOrders[floor][0] == (ORDER || queueData.IP) || (queueData.insideOrders[floor] == (ORDER || queueData.IP) && floor > queueData.floor){
+				if queueData.OutsideOrders[floor][0] == ORDER || (queueData.InsideOrders[floor] == ORDER && floor > queueData.Floor){
 					totalCost += COST_FOR_ORDER
 					floorsSinceLastOrder = 0
 				}				
@@ -157,10 +142,10 @@ func CalcTotalCost(queueData elevatorData) int {
 
 			floorsSinceLastOrder -= 1
 
-			for floor := FLOORS-1; floor > queueData.floor; floor --{
+			for floor := src.N_FLOORS-1; floor > queueData.Floor; floor --{
 				totalCost += COST_FOR_MOVE
 				floorsSinceLastOrder += 1
-				if queueData.outsideOrders[floor][1] == (ORDER || queueData.IP) {
+				if queueData.OutsideOrders[floor][1] == ORDER {
 					totalCost  += COST_FOR_ORDER
 					floorsSinceLastOrder = 0
 				}
@@ -170,7 +155,7 @@ func CalcTotalCost(queueData elevatorData) int {
 			totalCost -= floorsSinceLastOrder
 			return totalCost	
 
-		default: //Ta med IDLE?
+		default: //Ta med src.DIR_STOP?
 			// ...
 	}
 
@@ -180,41 +165,42 @@ func CalcTotalCost(queueData elevatorData) int {
 }
 
 
-
 func calcNextFloor() {
-
 }
 
 
-func main() { // func queueHandler() {
+func QueueHandler() { // func queueHandler() {
 	// Initialisere kanaler her:
-	// chReadyToMerge 	:= make(chan bool)
-	// chIncomingQueues:= make(chan elevatorData)
-	// chNewFloor		:= make(chan int)
-	// chNewOrder 		:= make(chan Order) //make(chan styring.Order)
-	// chNewDirection	:= make(chan int)
-	// chDeleteOrder 	:= make(chan Order) //make(chan styring.Order)
+	chNewFloor		:= make(chan int)
+	chNewOrder 		:= make(chan src.ButtonOrder) //make(chan styring.Order)
+	chNewDirection	:= make(chan int)
+	chOrderIsFinished 	:= make(chan src.ButtonOrder) //make(chan styring.Order)
 
-	// for {
-	// 	select {
-	// 		case <- chReadyToMerge:
-	// 			//add our elevatorData into dataStorage
-	// 			//mergeOrders()
-	// 			//assignOrders()
-	// 			//calcNextFloor()
-	// 			//send mergedOrders til nettverk
-	// 			//toem dataStorage
-	// 		case data := <- chIncomingQueues:
-	// 			//append to list of data
-	// 		case newFloor := <- chNewFloor:
-	// 			//update elevatorData.floor
-	// 		case newOrder := <- chNewOrder:
-	// 			//update elevatorData.queueMatrix
-	// 		case deletedOrder := <- chDeleteOrder:
-	// 			//update elevatorData.queueMatrix with a special char
-	// 		case newDirection := <- chNewDirection:
-	// 			//update elevator.direction
+	for {
+		select {
+			case <- network.ChReadyToMerge:
+				mergedQueue := mergeOrders(listOfIncomingData)
+				listOfIncomingData = nil
+				network.ChQueueReadyToBeSent <- mergedQueue
+				//assignOrders()
+				//calcNextFloor()
+				//toem dataStorage
+			case data := <- network.ChDataToQueue:
+				listOfIncomingData = append(listOfIncomingData, data)
 
-	// 	}
-	// }
+			case newFloor := <- chNewFloor:
+				//update elevatorData.floor
+				print(newFloor) // ONLY FOR TESTING
+			case newOrder := <- chNewOrder:
+				//update elevatorData.queueMatrix
+				print(newOrder.Floor) // ONLY FOR TESTING
+			case finishedOrder := <- chOrderIsFinished:
+				//update elevatorData.queueMatrix with a special char
+				print(finishedOrder.Floor) // ONLY FOR TESTING
+			case newDirection := <- chNewDirection:
+				//update elevator.direction
+				print(newDirection) // ONLY FOR TESTING
+
+		}
+	}
 }

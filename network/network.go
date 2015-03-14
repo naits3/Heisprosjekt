@@ -7,8 +7,6 @@ import (
 	"Heisprosjekt/src"
 )
 
-var N_FLOORS = src.GetNFloors()
-
 var connStorage map[string]net.Conn = nil
 const PORT = "80"	
 
@@ -16,8 +14,19 @@ const PORT = "80"
 var connectionStatus = make(map[string]bool) //map[IP]status
 var pingTimeLimit time.Duration = time.Second
 
+// Channels made for communication across modules
+var ChDataToQueue = make(chan src.ElevatorData)
+var ChReadyToMerge = make(chan bool)
+var ChQueueReadyToBeSent = make(chan src.ElevatorData)
 
-func sendPing(udpConn net.Conn){
+//TESTED:
+func sendPing(broadcastConn *net.UDPConn){
+	for {
+		select {
+			case data := <- ChQueueReadyToBeSent:
+				broadcastConn.Write(Pack(data))
+		}
+	}
 }
 
 //TESTED:
@@ -90,7 +99,7 @@ func timer(timeout chan bool) {
 	}
 }
 
-func networkHandler() {
+func NetworkHandler() {
 	chTimeout := make(chan bool)
 	chReceivedData := make(chan []byte)
 	chReceivedIPAddress := make(chan string)
@@ -100,15 +109,15 @@ func networkHandler() {
 
 	for {
 		select {
-			case <- chReceivedData:
-				//println(string(data))
+			case data := <- chReceivedData:
+				ChDataToQueue <- Unpack(data)
+
 			case IPAddress := <- chReceivedIPAddress:
 				connectionStatus[IPAddress] = true
 
 			case <- chTimeout:
-
 				for address, status := range connectionStatus{
-					println(address) // FOR TESTING ONLY
+					//println(address) // FOR TESTING ONLY
 					switch status {
 						case true:
 							connectionStatus[address] = false
@@ -116,7 +125,14 @@ func networkHandler() {
 							delete(connectionStatus, address)
 					}
 				}
-				println()
+				// Send an OK-signal to the queue here when connections are handled
+				ChReadyToMerge <- true
 		}
 	}
 }
+
+// TODO:
+
+// * implement sendPing() 									| OK
+// * handle connections when a elevator does not respond	|
+// * send the received orders to queue 						| OK
