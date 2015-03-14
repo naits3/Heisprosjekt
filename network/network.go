@@ -1,35 +1,35 @@
-package Network
+package network
 
 import (
 	"net"
 	"strings"
 	"time"
+	"Heisprosjekt/src"
 )
-
-const FLOORS = 4
 
 var connStorage map[string]net.Conn = nil
 const PORT = "80"	
 
-type elevatorData struct {  //MUST BE ADDED TO SOURCE
-	IP 				int
-	floor 			int
-	direction 		int
-	outsideOrders [FLOORS][2]int
-	insideOrders  [FLOORS]int
-}
 
 var connectionStatus = make(map[string]bool) //map[IP]status
 var pingTimeLimit time.Duration = time.Second
 
-
-func sendPing(udpConn net.Conn){
-
-}
-
+// Channels made for communication across modules
+var ChDataToQueue = make(chan src.ElevatorData)
+var ChReadyToMerge = make(chan bool)
+var ChQueueReadyToBeSent = make(chan src.ElevatorData)
 
 //TESTED:
-// - need to test with multiple clients
+func sendPing(broadcastConn *net.UDPConn){
+	for {
+		select {
+			case data := <- ChQueueReadyToBeSent:
+				broadcastConn.Write(Pack(data))
+		}
+	}
+}
+
+//TESTED:
 func listenPing(chReceivedData chan []byte, chReceivedIPaddress chan string){
 	UDPAddr, _ := net.ResolveUDPAddr("udp",":"+PORT)
 	var buffer []byte = make([]byte, 1024)
@@ -56,9 +56,7 @@ func listenPing(chReceivedData chan []byte, chReceivedIPaddress chan string){
 		chReceivedIPaddress <- IPaddress
 		chReceivedData <- buffer[:lengthOfMessage]
 	}
-
 }
-
 
 // TESTED:
 func createBroadcastConn() *net.UDPConn{
@@ -68,7 +66,6 @@ func createBroadcastConn() *net.UDPConn{
 	broadcastConn, err := net.DialUDP("udp",nil,UDPAddr)
 	if err != nil {print("Error creating UDP") }// Error handling here}
 	return broadcastConn
-
 }
 
 // TESTED: 
@@ -94,6 +91,7 @@ func getBroadcastIP() string{
 	return "is_offline" // EDIT THIS?
 }
 
+// TESTED:
 func timer(timeout chan bool) {
 	for {
 		time.Sleep(pingTimeLimit)
@@ -101,7 +99,7 @@ func timer(timeout chan bool) {
 	}
 }
 
-func networkHandler() {
+func NetworkHandler() {
 	chTimeout := make(chan bool)
 	chReceivedData := make(chan []byte)
 	chReceivedIPAddress := make(chan string)
@@ -111,15 +109,15 @@ func networkHandler() {
 
 	for {
 		select {
-			case <- chReceivedData:
-				//println(string(data))
+			case data := <- chReceivedData:
+				ChDataToQueue <- Unpack(data)
+
 			case IPAddress := <- chReceivedIPAddress:
 				connectionStatus[IPAddress] = true
 
 			case <- chTimeout:
-
 				for address, status := range connectionStatus{
-					println(address) // FOR TESTING ONLY
+					//println(address) // FOR TESTING ONLY
 					switch status {
 						case true:
 							connectionStatus[address] = false
@@ -127,7 +125,14 @@ func networkHandler() {
 							delete(connectionStatus, address)
 					}
 				}
-				println()
+				// Send an OK-signal to the queue here when connections are handled
+				ChReadyToMerge <- true
 		}
 	}
 }
+
+// TODO:
+
+// * implement sendPing() 									| OK
+// * handle connections when a elevator does not respond	|
+// * send the received orders to queue 						| OK

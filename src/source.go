@@ -1,6 +1,6 @@
-package source
+package src
 
-const n_floors = 4
+const N_FLOORS = 4
 
 const(
 	BUTTON_UP 		= 0
@@ -14,8 +14,8 @@ const(
 	DIR_UP      =  1
 )
 
-
 type ButtonOrder struct{
+<<<<<<< HEAD:source/source.go
 	floor 		int
 	buttonType 	int 
 }
@@ -30,3 +30,16 @@ type ElevatorData struct {
 func GetNFloors() int{
 	return n_floors
 }
+=======
+	Floor 		int
+	ButtonType 	int 
+}
+
+type ElevatorData struct {
+	Floor 			int
+	Direction 		int
+	OutsideOrders [N_FLOORS][2]int
+	InsideOrders  [N_FLOORS]int
+}
+
+>>>>>>> network:src/source.go
