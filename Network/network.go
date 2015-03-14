@@ -1,35 +1,26 @@
-package Network
+package network
 
 import (
 	"net"
 	"strings"
 	"time"
+	"Heisprosjekt/src"
 )
 
-const FLOORS = 4
+var N_FLOORS = src.GetNFloors()
 
 var connStorage map[string]net.Conn = nil
 const PORT = "80"	
 
-type elevatorData struct {  //MUST BE ADDED TO SOURCE
-	IP 				int
-	floor 			int
-	direction 		int
-	outsideOrders [FLOORS][2]int
-	insideOrders  [FLOORS]int
-}
 
 var connectionStatus = make(map[string]bool) //map[IP]status
 var pingTimeLimit time.Duration = time.Second
 
 
 func sendPing(udpConn net.Conn){
-
 }
 
-
 //TESTED:
-// - need to test with multiple clients
 func listenPing(chReceivedData chan []byte, chReceivedIPaddress chan string){
 	UDPAddr, _ := net.ResolveUDPAddr("udp",":"+PORT)
 	var buffer []byte = make([]byte, 1024)
@@ -56,9 +47,7 @@ func listenPing(chReceivedData chan []byte, chReceivedIPaddress chan string){
 		chReceivedIPaddress <- IPaddress
 		chReceivedData <- buffer[:lengthOfMessage]
 	}
-
 }
-
 
 // TESTED:
 func createBroadcastConn() *net.UDPConn{
@@ -68,7 +57,6 @@ func createBroadcastConn() *net.UDPConn{
 	broadcastConn, err := net.DialUDP("udp",nil,UDPAddr)
 	if err != nil {print("Error creating UDP") }// Error handling here}
 	return broadcastConn
-
 }
 
 // TESTED: 
@@ -94,6 +82,7 @@ func getBroadcastIP() string{
 	return "is_offline" // EDIT THIS?
 }
 
+// TESTED:
 func timer(timeout chan bool) {
 	for {
 		time.Sleep(pingTimeLimit)

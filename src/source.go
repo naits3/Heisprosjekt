@@ -1,4 +1,4 @@
-package source
+package src
 
 const n_floors = 4
 
@@ -22,4 +22,11 @@ type ButtonOrder struct{
 
 func GetNFloors() int{
 	return n_floors
+}
+
+type ElevatorData struct {
+	floor 			int
+	direction 		int
+	outsideOrders [n_floors][2]int
+	insideOrders  [n_floors]int
 }
