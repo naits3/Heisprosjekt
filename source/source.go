@@ -17,7 +17,14 @@ const(
 
 type ButtonOrder struct{
 	floor 		int
-	ButtonType 	int 
+	buttonType 	int 
+}
+
+type ElevatorData struct { 
+	floor 			int
+	direction 		int
+	outsideOrders [FLOORS][2]int
+	insideOrders  [FLOORS]int
 }
 
 func GetNFloors() int{
