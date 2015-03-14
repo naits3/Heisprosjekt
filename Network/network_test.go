@@ -37,3 +37,26 @@ func TestListenPing(t *testing.T) {
 		}
 	}
 }
+
+
+func TestNetworkHandler(t *testing.T) {
+	networkHandler()
+	
+
+	// test := make(map[string]bool)
+	// test["hei"] = true
+	// //delete(test,"hei")
+
+	// println("1:")
+	// for key, value := range test{
+		
+	// 	println(key+":", value)
+	// 	delete(test, key)
+	// }
+
+	// println("2:")
+	// for key, value := range test{
+	// 	println(key+":", value)
+	// 	//delete(test, key)
+	// }
+}

@@ -3,15 +3,15 @@ package Network
 import (
 	"net"
 	"strings"
-	//"time"
+	"time"
 )
 
 const FLOORS = 4
 
 var connStorage map[string]net.Conn = nil
-const PORT = "3000"	
+const PORT = "80"	
 
-type elevatorData struct { 
+type elevatorData struct {  //MUST BE ADDED TO SOURCE
 	IP 				int
 	floor 			int
 	direction 		int
@@ -19,9 +19,12 @@ type elevatorData struct {
 	insideOrders  [FLOORS]int
 }
 
+var connectionStatus = make(map[string]bool) //map[IP]status
+var pingTimeLimit time.Duration = time.Second
+
 
 func sendPing(udpConn net.Conn){
-	
+
 }
 
 
@@ -53,6 +56,7 @@ func listenPing(chReceivedData chan []byte, chReceivedIPaddress chan string){
 		chReceivedIPaddress <- IPaddress
 		chReceivedData <- buffer[:lengthOfMessage]
 	}
+
 }
 
 
@@ -88,4 +92,42 @@ func getBroadcastIP() string{
 	    }
 	}
 	return "is_offline" // EDIT THIS?
+}
+
+func timer(timeout chan bool) {
+	for {
+		time.Sleep(pingTimeLimit)
+		timeout <- true
+	}
+}
+
+func networkHandler() {
+	chTimeout := make(chan bool)
+	chReceivedData := make(chan []byte)
+	chReceivedIPAddress := make(chan string)
+
+	go listenPing(chReceivedData, chReceivedIPAddress)
+	go timer(chTimeout)
+
+	for {
+		select {
+			case <- chReceivedData:
+				//println(string(data))
+			case IPAddress := <- chReceivedIPAddress:
+				connectionStatus[IPAddress] = true
+
+			case <- chTimeout:
+
+				for address, status := range connectionStatus{
+					println(address) // FOR TESTING ONLY
+					switch status {
+						case true:
+							connectionStatus[address] = false
+						case false:
+							delete(connectionStatus, address)
+					}
+				}
+				println()
+		}
+	}
 }
