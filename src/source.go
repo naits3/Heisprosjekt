@@ -15,22 +15,6 @@ const(
 )
 
 type ButtonOrder struct{
-<<<<<<< HEAD:source/source.go
-	floor 		int
-	buttonType 	int 
-}
-
-type ElevatorData struct { 
-	floor 			int
-	direction 		int
-	outsideOrders [FLOORS][2]int
-	insideOrders  [FLOORS]int
-}
-
-func GetNFloors() int{
-	return n_floors
-}
-=======
 	Floor 		int
 	ButtonType 	int 
 }
@@ -42,4 +26,3 @@ type ElevatorData struct {
 	InsideOrders  [N_FLOORS]int
 }
 
->>>>>>> network:src/source.go
