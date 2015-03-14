@@ -1,6 +1,6 @@
 
 
-package Queue//package Queue
+package queue//package Queue
 
 type elevatorData struct { 
 	IP 				int
