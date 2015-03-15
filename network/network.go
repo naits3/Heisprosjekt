@@ -10,7 +10,6 @@ import (
 
 const PORT = "80"	
 
-var IPaddress
 var connectionStatus = make(map[string]bool) //map[IP]status
 var pingTimeLimit time.Duration = 3*time.Second
 
@@ -59,7 +58,17 @@ func listenPing(chReceivedData chan []byte, chReceivedIPaddress chan string){
 
 // TESTED:
 func createBroadcastConn() *net.UDPConn{
-	broadcastIP := getBroadcastIP()
+	broadcastIP := GetIPAddress()
+	
+	switch(broadcastIP) {
+		case "127.0.0.1":
+			break
+		default:
+			ipArray := strings.Split(broadcastIP,".")
+			ipArray[3] = "255"
+			broadcastIP = strings.Join(ipArray,".")
+	}
+
 	UDPAddr, err := net.ResolveUDPAddr("udp",broadcastIP + ":" + PORT)
 
 	broadcastConn, err := net.DialUDP("udp",nil,UDPAddr)
@@ -67,8 +76,8 @@ func createBroadcastConn() *net.UDPConn{
 	return broadcastConn
 }
 
-// TESTED: 
-func getBroadcastIP() string{
+// TESTED:
+func GetIPAddress() string{
 	ifaces, _ := net.Interfaces()
 	// handle err
 	for _, i := range ifaces {
@@ -78,11 +87,8 @@ func getBroadcastIP() string{
 	        switch addressType:= addr.(type) {
 	        case *net.IPAddr:
 	            if(addressType.IP.String() != "0.0.0.0"){
-	            	localAddr := addressType.IP.String()
-	            	localAddrSplitted := strings.Split(localAddr,".")
-	            	localAddrSplitted[3] = "255"
-	            	broadcastAddr := strings.Join(localAddrSplitted,".")
-	            	return(broadcastAddr)
+	            	return addressType.IP.String()
+	            	
 	        	}
 	        }
 	    }
@@ -127,6 +133,7 @@ func NetworkHandler() {
 							delete(connectionStatus, address)
 					}
 				}
+				// Fix so we merge only of we have something to merge...
 				ChReadyToMerge <- true
 		}
 	}
@@ -137,3 +144,5 @@ func NetworkHandler() {
 // * implement sendPing() 									| OK
 // * handle connections when a elevator does not respond	|
 // * send the received orders to queue 						| OK
+// * make it so we don't receive our queue thru connection 	| 
+// * set IPadress manually									|

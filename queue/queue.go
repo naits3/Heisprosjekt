@@ -1,6 +1,4 @@
-
-
-package queue//package Queue
+package queue
 
 import (
 	"Heisprosjekt/src"
@@ -13,11 +11,44 @@ const (
 	DELETE_ORDER = -1
 )
 
-var localQueue     	src.ElevatorData
+var ID 					int // The IP has to be converted into int somehow
+var knownOrders    		src.ElevatorData
 var listOfIncomingData  []src.ElevatorData
 
 
+func findMinimumCost(costArray []int, queueList []src.ElevatorData) int {
+	// This function is now influenced by a random factor - when two costs
+	// are equal, the first entry is set as minimum. This cannot be the case, 
+	// as two elevators may calculate different!
+	minValue := costArray[0]
+	minElevator := 0
 
+	for elevator, value := range costArray {
+		if value < minValue {
+			minValue = value
+			minElevator = elevator
+		}
+
+		if value == minValue {
+			if queueList[elevator].ID < queueList[minElevator].ID {
+				minValue = value
+				minElevator = elevator
+			}
+		}
+	}
+	return minElevator
+}
+
+
+func clearOutsideOrders(queueList []src.ElevatorData, ourQueue src.ElevatorData) {
+	var EmptyElevatorData src.ElevatorData
+
+	for elevator := 0; elevator < len(queueList); elevator ++ {
+		queueList[elevator].OutsideOrders = EmptyElevatorData.OutsideOrders
+	}
+}
+
+// TESTED:
 func mergeOrders(queueList []src.ElevatorData) src.ElevatorData {
 	var mergedData src.ElevatorData
 	var mergedQueue [src.N_FLOORS][2]int	
@@ -43,30 +74,36 @@ func mergeOrders(queueList []src.ElevatorData) src.ElevatorData {
 }
 
 
-func assignOrders(queueList []src.ElevatorData, mergedQueue src.ElevatorData) int { // return elevatorData
+func assignOrders(queueList []src.ElevatorData, mergedQueue src.ElevatorData) []src.ElevatorData {
 	var costArray []int
+	ourQueue := knownOrders
 
-	for floor := 0; floor < src.N_FLOORS; floor ++ {
-		for direction := 0; direction < 2; direction ++ {
-			
+	clearOutsideOrders(queueList, ourQueue)
+	
+	for direction := 0; direction < 2; direction ++ {
+		for floor := 0; floor < src.N_FLOORS; floor ++ {
+				
 			if mergedQueue.OutsideOrders[floor][direction] == src.ORDER {
+
 				for eachElevator := 0; eachElevator < len(queueList); eachElevator ++{
-					//mergedQueue.OutsideOrders[floor][direction] = ID
+					
+					queueList[eachElevator].OutsideOrders[floor][direction] = ORDER
 					costArray = append(costArray, calcTotalCost(queueList[eachElevator]))
+					queueList[eachElevator].OutsideOrders[floor][direction] = EMPTY
 				}
 
-				//assignedElevator = min(costArray, )
-
-				//minst totalCost faar ordren
-				//Hvilke tall skal vi bruke for aa gi unik ID til hver heis? Trenger vel ikke det?
+				assignedElevator := findMinimumCost(costArray, queueList)
+				queueList[assignedElevator].OutsideOrders[floor][direction] = ORDER
+				costArray = []int{}
 			}
 		}
 	}
-
-	return 0			
+	// Loop through and search for our list, alternatively we know that our is the last one.
+	// Then return ourQueue only
+	return queueList
 }
 
-
+// Need to implement when direction is DIR_STOP
 func calcTotalCost(queueData src.ElevatorData) int {
 	const COST_FOR_ORDER = 3
 	const COST_FOR_MOVE = 1
@@ -165,7 +202,7 @@ func calcNextFloor() {
 }
 
 
-func QueueHandler() { // func queueHandler() {
+func QueueHandler() {
 	// Initialisere kanaler her:
 	chNewFloor		:= make(chan int)
 	chNewOrder 		:= make(chan src.ButtonOrder) //make(chan styring.Order)
@@ -200,3 +237,9 @@ func QueueHandler() { // func queueHandler() {
 		}
 	}
 }
+
+// TODO:
+
+// * implement functionality for DIR_STOP in calcTotalCost					|
+// * pass our queue into merge orders when ReadyToMerge 					|
+// * idea: make cost-function to weight no. of stops only (less code)		|

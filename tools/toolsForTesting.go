@@ -29,7 +29,15 @@ func PrintQueue(queueData src.ElevatorData) {
 		}
 		println(" ")
 	}
-	println(" ")
+	println(" ID:",queueData.ID)
+	println()
+}
+
+
+func PrintQueueArray(queueData []src.ElevatorData) {
+	for element := 0; element < len(queueData); element ++ {
+		PrintQueue(queueData[element])
+	}
 }
 
 // TESTED:
