@@ -8,8 +8,7 @@ import (
 
 func TestGetIP(t *testing.T) {
 	ip := getBroadcastIP()
-	println(ip)
-	
+	println(ip)	
 }
 
 func TestBroadcastConn(t *testing.T){
@@ -52,7 +51,6 @@ func send(){
 func TestNetworkHandler(t *testing.T) {
 	NetworkHandler()
 	
-
 	// test := make(map[string]bool)
 	// test["hei"] = true
 	// //delete(test,"hei")
