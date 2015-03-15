@@ -1,6 +1,8 @@
 package queue
 
 import (
+	"strings"
+	"strconv"
 	"Heisprosjekt/src"
 	"Heisprosjekt/network"
 )
@@ -11,7 +13,6 @@ const (
 	DELETE_ORDER = -1
 )
 
-var ID 					int // The IP has to be converted into int somehow
 var knownOrders    		src.ElevatorData
 var listOfIncomingData  []src.ElevatorData
 
@@ -40,7 +41,7 @@ func findMinimumCost(costArray []int, queueList []src.ElevatorData) int {
 }
 
 
-func clearOutsideOrders(queueList []src.ElevatorData, ourQueue src.ElevatorData) {
+func clearOutsideOrders(queueList []src.ElevatorData) {
 	var EmptyElevatorData src.ElevatorData
 
 	for elevator := 0; elevator < len(queueList); elevator ++ {
@@ -76,9 +77,8 @@ func mergeOrders(queueList []src.ElevatorData) src.ElevatorData {
 
 func assignOrders(queueList []src.ElevatorData, mergedQueue src.ElevatorData) []src.ElevatorData {
 	var costArray []int
-	ourQueue := knownOrders
-
-	clearOutsideOrders(queueList, ourQueue)
+	
+	clearOutsideOrders(queueList)
 	
 	for direction := 0; direction < 2; direction ++ {
 		for floor := 0; floor < src.N_FLOORS; floor ++ {
@@ -208,6 +208,12 @@ func QueueHandler() {
 	chNewOrder 		:= make(chan src.ButtonOrder) //make(chan styring.Order)
 	chNewDirection	:= make(chan int)
 	chOrderIsFinished 	:= make(chan src.ButtonOrder) //make(chan styring.Order)
+
+	IPaddr := network.GetIPAddress()
+	IPaddrArray := strings.Split(IPaddr, ".")
+	ID, _ := strconv.Atoi(IPaddrArray[3])
+	knownOrders.ID = ID
+
 
 	for {
 		select {

@@ -65,7 +65,6 @@ func TestClearOutsideOrders(t *testing.T) {
 	var testData1 src.ElevatorData
 	var testData2 src.ElevatorData
 	var testData3 src.ElevatorData
-	var ourQueue  src.ElevatorData
 	testData1.OutsideOrders[0][0] = ORDER
 	testData1.InsideOrders[2] = ORDER
 	testData1.ID = 1
@@ -85,7 +84,7 @@ func TestClearOutsideOrders(t *testing.T) {
 	}
 
 	println("After clearing: ")
-	clearOutsideOrders(dataArray, ourQueue)
+	clearOutsideOrders(dataArray)
 
 	for elevator := 0; elevator < len(dataArray); elevator ++ {
 		tools.PrintQueue(dataArray[elevator])
