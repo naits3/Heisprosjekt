@@ -7,12 +7,12 @@ import (
 	"Heisprosjekt/src"
 )
 
-var connStorage map[string]net.Conn = nil
+
 const PORT = "80"	
 
-
+var IPaddress
 var connectionStatus = make(map[string]bool) //map[IP]status
-var pingTimeLimit time.Duration = time.Second
+var pingTimeLimit time.Duration = 3*time.Second
 
 // Channels made for communication across modules
 var ChDataToQueue = make(chan src.ElevatorData)
@@ -43,7 +43,6 @@ func listenPing(chReceivedData chan []byte, chReceivedIPaddress chan string){
 	defer conn.Close()
 
 	for {
-
 		lengthOfMessage, IPaddressAndPort, err := conn.ReadFromUDP(buffer)
 		if err != nil {
 			print(err)
@@ -88,7 +87,10 @@ func getBroadcastIP() string{
 	        }
 	    }
 	}
-	return "is_offline" // EDIT THIS?
+	return "127.0.0.1"
+	// Vi får et problem dersom heisen vår er frakoblet i oppstart, og skal koble seg på nettet seinere.
+	// Én løsning er å slette denne funksjonen, og sette IP direkte. 
+	// ... Eller ikke. Hvordan vil vi da kunne sende kø i offline?
 }
 
 // TESTED:
@@ -125,7 +127,6 @@ func NetworkHandler() {
 							delete(connectionStatus, address)
 					}
 				}
-				// Send an OK-signal to the queue here when connections are handled
 				ChReadyToMerge <- true
 		}
 	}

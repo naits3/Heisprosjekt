@@ -16,13 +16,9 @@ const (
 var localQueue     	src.ElevatorData
 var listOfIncomingData  []src.ElevatorData
 
-// Channels made for communication across modules
-
 
 
 func mergeOrders(queueList []src.ElevatorData) src.ElevatorData {
-	//Go through list, append orders. Remove if orders are finished
-	//Remember to add your own global list as well
 	var mergedData src.ElevatorData
 	var mergedQueue [src.N_FLOORS][2]int	
 
@@ -32,10 +28,10 @@ func mergeOrders(queueList []src.ElevatorData) src.ElevatorData {
 			
 			for eachQueue := 0; eachQueue < len(queueList); eachQueue ++ {
 				switch queueList[eachQueue].OutsideOrders[floor][direction] {
-					case ORDER:
-						mergedQueue[floor][direction] = ORDER
-					case DELETE_ORDER:
-						mergedQueue[floor][direction] = EMPTY
+					case src.ORDER:
+						mergedQueue[floor][direction] = src.ORDER
+					case src.DELETE_ORDER:
+						mergedQueue[floor][direction] = src.EMPTY
 						break directionLoop
 				}
 			}
@@ -46,36 +42,36 @@ func mergeOrders(queueList []src.ElevatorData) src.ElevatorData {
 	return mergedData
 }
 
+
 func assignOrders(queueList []src.ElevatorData, mergedQueue src.ElevatorData) int { // return elevatorData
 	var costArray []int
-	//queueList = globalQueues + localQueue
+
 	for floor := 0; floor < src.N_FLOORS; floor ++ {
 		for direction := 0; direction < 2; direction ++ {
 			
-			if mergedQueue.OutsideOrders[floor][direction] == ORDER {
+			if mergedQueue.OutsideOrders[floor][direction] == src.ORDER {
 				for eachElevator := 0; eachElevator < len(queueList); eachElevator ++{
+					//mergedQueue.OutsideOrders[floor][direction] = ID
 					costArray = append(costArray, calcTotalCost(queueList[eachElevator]))
 				}
+
+				//assignedElevator = min(costArray, )
+
 				//minst totalCost faar ordren
 				//Hvilke tall skal vi bruke for aa gi unik ID til hver heis? Trenger vel ikke det?
-				// 1 er jo ORDER!
 			}
 		}
 	}
 
 	return 0			
-
 }
+
 
 func calcTotalCost(queueData src.ElevatorData) int {
 	const COST_FOR_ORDER = 3
 	const COST_FOR_MOVE = 1
 	totalCost := 0
 	floorsSinceLastOrder := 0
-
-	// remove "illegal states" here?
-	// i.e dir = DIR_UP & floor = 4
-	// and dir = src.DIR_DOWN & floor = 0
 
 	// IDE:
 	// Kan man gjoere det saa enkelt at man teller oppover og nedover helt til man finner siste 1-er
@@ -86,7 +82,7 @@ func calcTotalCost(queueData src.ElevatorData) int {
 			for floor := queueData.Floor; floor < src.N_FLOORS; floor ++ {
 				totalCost += COST_FOR_MOVE
 				floorsSinceLastOrder += 1
-				if queueData.OutsideOrders[floor][0] == ORDER || queueData.InsideOrders[floor] == ORDER {
+				if queueData.OutsideOrders[floor][0] == src.ORDER || queueData.InsideOrders[floor] == src.ORDER {
 					totalCost += COST_FOR_ORDER
 					floorsSinceLastOrder = 0
 				}				
@@ -97,7 +93,7 @@ func calcTotalCost(queueData src.ElevatorData) int {
 			for floor := src.N_FLOORS-1; floor >= 0; floor-- {
 				totalCost += COST_FOR_MOVE
 				floorsSinceLastOrder += 1 
-				if queueData.OutsideOrders[floor][1] == ORDER || (queueData.InsideOrders[floor] == ORDER  && floor < queueData.Floor){
+				if queueData.OutsideOrders[floor][1] == src.ORDER || (queueData.InsideOrders[floor] == src.ORDER  && floor < queueData.Floor){
 					totalCost += COST_FOR_ORDER
 					floorsSinceLastOrder = 0
 				}				
@@ -108,7 +104,7 @@ func calcTotalCost(queueData src.ElevatorData) int {
 			for floor := 0; floor < queueData.Floor; floor ++{
 				totalCost += COST_FOR_MOVE
 				floorsSinceLastOrder += 1
-				if queueData.OutsideOrders[floor][0] == ORDER {
+				if queueData.OutsideOrders[floor][0] == src.ORDER {
 					totalCost  += COST_FOR_ORDER
 					floorsSinceLastOrder = 0
 				}
@@ -123,7 +119,7 @@ func calcTotalCost(queueData src.ElevatorData) int {
 			for floor := queueData.Floor; floor >= 0; floor-- {
 				totalCost += COST_FOR_MOVE
 				floorsSinceLastOrder += 1 
-				if queueData.OutsideOrders[floor][1] == ORDER || queueData.InsideOrders[floor] == ORDER  {
+				if queueData.OutsideOrders[floor][1] == src.ORDER || queueData.InsideOrders[floor] == src.ORDER  {
 					totalCost += COST_FOR_ORDER
 					floorsSinceLastOrder = 0
 				}				
@@ -134,7 +130,7 @@ func calcTotalCost(queueData src.ElevatorData) int {
 			for floor := 0; floor < src.N_FLOORS; floor ++ {
 				totalCost += COST_FOR_MOVE
 				floorsSinceLastOrder += 1
-				if queueData.OutsideOrders[floor][0] == ORDER || (queueData.InsideOrders[floor] == ORDER && floor > queueData.Floor){
+				if queueData.OutsideOrders[floor][0] == src.ORDER || (queueData.InsideOrders[floor] == src.ORDER && floor > queueData.Floor){
 					totalCost += COST_FOR_ORDER
 					floorsSinceLastOrder = 0
 				}				
@@ -145,7 +141,7 @@ func calcTotalCost(queueData src.ElevatorData) int {
 			for floor := src.N_FLOORS-1; floor > queueData.Floor; floor --{
 				totalCost += COST_FOR_MOVE
 				floorsSinceLastOrder += 1
-				if queueData.OutsideOrders[floor][1] == ORDER {
+				if queueData.OutsideOrders[floor][1] == src.ORDER {
 					totalCost  += COST_FOR_ORDER
 					floorsSinceLastOrder = 0
 				}
@@ -153,7 +149,7 @@ func calcTotalCost(queueData src.ElevatorData) int {
 
 			totalCost -= 3*COST_FOR_MOVE // 1 when we start, and 1 when we change dir * 2
 			totalCost -= floorsSinceLastOrder
-			return totalCost	
+			return totalCost
 
 		default: //Ta med src.DIR_STOP?
 			// ...
