@@ -294,8 +294,18 @@ func QueueHandler() {
 		select {
 			case <- network.ChReadyToMerge:
 				allElevatorData := append(listOfIncomingData, knownOrders)
-				mergedQueue := mergeOrders(allElevatorData)
+				
+				// FOR TESTING
+				println("------------------------------")
+				println("Queues that are going to be merged: ")
+				tools.PrintQueueArray(allElevatorData)
+				// ------------
 
+				mergedQueue := mergeOrders(allElevatorData)
+				//
+				println("The merged Queue: ")
+				tools.PrintQueue(mergedQueue)
+				//
 				knownOrders.OutsideOrders = mergedQueue.OutsideOrders
 				network.ChQueueReadyToBeSent <- knownOrders
 				assignedOrder := assignOrders(allElevatorData, mergedQueue)
@@ -303,6 +313,7 @@ func QueueHandler() {
 				listOfIncomingData = nil
 
 				// FOR TESTING: ------------------
+				println("Assigned Queue: ")
 				println("next floor:", nextFloor)
 				tools.PrintQueue(assignedOrder)
 				// -------------------------------

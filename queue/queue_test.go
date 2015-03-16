@@ -149,6 +149,11 @@ func TestAssignOrders(t *testing.T) {
 
 func TestQueueHandler(t *testing.T) {
 	go network.NetworkHandler()
+	
+	knownOrders.OutsideOrders[0][1] = 1
+	knownOrders.OutsideOrders[2][1] = 1
+	knownOrders.OutsideOrders[2][0] = 1
 
 	QueueHandler()
 }
+

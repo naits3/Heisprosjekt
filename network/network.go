@@ -10,7 +10,12 @@ import (
 const PORT = "80"	
 const IP = "192.168.0.102"
 var connectionStatus = make(map[string]bool) //map[IP]status
-var pingTimeLimit time.Duration = 3*time.Second
+var pingTimeLimit time.Duration = 10*time.Second
+
+type networkMessage struct {
+	address string
+	elevatorData []byte
+}
 
 // Channels made for communication across modules
 var ChDataToQueue = make(chan src.ElevatorData)
@@ -28,7 +33,7 @@ func sendPing(broadcastConn *net.UDPConn, chSendData chan src.ElevatorData){
 }
 
 //TESTED:
-func listenPing(chReceivedData chan []byte, chReceivedIPaddress chan string){
+func listenPing(chReceivedData chan networkMessage){
 	UDPAddr, _ := net.ResolveUDPAddr("udp",":"+PORT)
 	var buffer []byte = make([]byte, 1024)
 	conn, err := net.ListenUDP("udp", UDPAddr)
@@ -50,12 +55,8 @@ func listenPing(chReceivedData chan []byte, chReceivedIPaddress chan string){
 		IPaddressAndPortArray := strings.Split(IPaddressAndPort.String(),":")
 		IPaddress := IPaddressAndPortArray[0]
 
-		if IPaddress == IP {
-			continue
-		}
-		
-		chReceivedIPaddress <- IPaddress
-		chReceivedData <- buffer[:lengthOfMessage]
+				
+		chReceivedData <- networkMessage{ IPaddress, buffer[:lengthOfMessage] }
 	}
 }
 
@@ -110,33 +111,42 @@ func timer(timeout chan bool) {
 	}
 }
 
+
 func NetworkHandler() {
 	chTimeout := make(chan bool)
-	chReceivedData := make(chan []byte)
+	chReceivedData := make(chan networkMessage)
 	chSendData := make(chan src.ElevatorData)
-	chReceivedIPAddress := make(chan string)
 
 	broadcastConn := createBroadcastConn()
 
-	go listenPing(chReceivedData, chReceivedIPAddress)
+	go listenPing(chReceivedData)
 	go sendPing(broadcastConn, chSendData)
 	go timer(chTimeout)
 
-	for {
+	for { 
 		select {
 			case data := <- chReceivedData:
-				ChDataToQueue <- Unpack(data)
-				
-			case IPAddress := <- chReceivedIPAddress:
-				connectionStatus[IPAddress] = true
-				
+				alreadyReceived := false
+				for storedAddress, status := range connectionStatus {
+					if data.address == storedAddress && status == true {
+						alreadyReceived = true
+					}
+				}
+
+				if (data.address == IP || alreadyReceived) {
+					break
+				}
+
+				println("received from: ", data.address)
+				connectionStatus[data.address] = true
+				ChDataToQueue <- Unpack(data.elevatorData)
 
 			case outGoingData := <- ChQueueReadyToBeSent:
 				chSendData <- outGoingData
 
 			case <- chTimeout:
 				for address, status := range connectionStatus{
-					
+					println(address)
 					switch status {
 						case true:
 							connectionStatus[address] = false
