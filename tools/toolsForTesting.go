@@ -47,6 +47,11 @@ func BroadcastElevatorData() {
 	conn, _ := net.DialUDP("udp",nil,addr)
 	var data src.ElevatorData
 
+	data.OutsideOrders[1][1] = 1
+	data.OutsideOrders[2][1] = 1
+	data.OutsideOrders[0][0] = 1
+	data.ID = 143
+
 	for {
 		time.Sleep(time.Second)
 		conn.Write(network.Pack(data))

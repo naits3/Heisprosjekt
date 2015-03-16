@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"Heisprosjekt/src"
 	"Heisprosjekt/network"
+	"Heisprosjekt/tools" //
 )
 
 const (
@@ -294,12 +295,17 @@ func QueueHandler() {
 			case <- network.ChReadyToMerge:
 				allElevatorData := append(listOfIncomingData, knownOrders)
 				mergedQueue := mergeOrders(allElevatorData)
+
 				knownOrders.OutsideOrders = mergedQueue.OutsideOrders
 				network.ChQueueReadyToBeSent <- knownOrders
 				assignedOrder := assignOrders(allElevatorData, mergedQueue)
-				calcNextFloor(assignedOrder)
+				nextFloor := calcNextFloor(assignedOrder)
 				listOfIncomingData = nil
 
+				// FOR TESTING: ------------------
+				println("next floor:", nextFloor)
+				tools.PrintQueue(assignedOrder)
+				// -------------------------------
 			case data := <- network.ChDataToQueue:
 				listOfIncomingData = append(listOfIncomingData, data)
 
@@ -308,11 +314,12 @@ func QueueHandler() {
 
 			case newOrder := <- chNewOrder:
 				//update elevatorData.queueMatrix
-				print(newOrder.Floor) // ONLY FOR TESTING
+				print(newOrder.Floor) // TEMPORARY
 			case finishedOrder := <- chOrderIsFinished:
 				//update elevatorData.queueMatrix with a special char
-				print(finishedOrder.Floor) // ONLY FOR TESTING
+				print(finishedOrder.Floor) // TEMPORARY
 			case newDirection := <- chNewDirection:
+
 				knownOrders.Direction = newDirection
 
 		}

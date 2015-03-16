@@ -7,9 +7,8 @@ import (
 	"Heisprosjekt/src"
 )
 
-
 const PORT = "80"	
-
+const IP = "192.168.0.102"
 var connectionStatus = make(map[string]bool) //map[IP]status
 var pingTimeLimit time.Duration = 3*time.Second
 
@@ -19,10 +18,10 @@ var ChReadyToMerge = make(chan bool)
 var ChQueueReadyToBeSent = make(chan src.ElevatorData)
 
 //TESTED:
-func sendPing(broadcastConn *net.UDPConn){
+func sendPing(broadcastConn *net.UDPConn, chSendData chan src.ElevatorData){
 	for {
 		select {
-			case data := <- ChQueueReadyToBeSent:
+			case data := <- chSendData:
 				broadcastConn.Write(Pack(data))
 		}
 	}
@@ -50,6 +49,10 @@ func listenPing(chReceivedData chan []byte, chReceivedIPaddress chan string){
 
 		IPaddressAndPortArray := strings.Split(IPaddressAndPort.String(),":")
 		IPaddress := IPaddressAndPortArray[0]
+
+		if IPaddress == IP {
+			continue
+		}
 		
 		chReceivedIPaddress <- IPaddress
 		chReceivedData <- buffer[:lengthOfMessage]
@@ -110,22 +113,30 @@ func timer(timeout chan bool) {
 func NetworkHandler() {
 	chTimeout := make(chan bool)
 	chReceivedData := make(chan []byte)
+	chSendData := make(chan src.ElevatorData)
 	chReceivedIPAddress := make(chan string)
 
+	broadcastConn := createBroadcastConn()
+
 	go listenPing(chReceivedData, chReceivedIPAddress)
+	go sendPing(broadcastConn, chSendData)
 	go timer(chTimeout)
 
 	for {
 		select {
 			case data := <- chReceivedData:
 				ChDataToQueue <- Unpack(data)
-
+				
 			case IPAddress := <- chReceivedIPAddress:
 				connectionStatus[IPAddress] = true
+				
+
+			case outGoingData := <- ChQueueReadyToBeSent:
+				chSendData <- outGoingData
 
 			case <- chTimeout:
 				for address, status := range connectionStatus{
-					//println(address) // FOR TESTING ONLY
+					
 					switch status {
 						case true:
 							connectionStatus[address] = false
@@ -133,7 +144,7 @@ func NetworkHandler() {
 							delete(connectionStatus, address)
 					}
 				}
-				// Fix so we merge only of we have something to merge...
+
 				ChReadyToMerge <- true
 		}
 	}
@@ -146,3 +157,4 @@ func NetworkHandler() {
 // * send the received orders to queue 						| OK
 // * make it so we don't receive our queue thru connection 	| 
 // * set IPadress manually									|
+// * send unique queues only to Queue modules				| 

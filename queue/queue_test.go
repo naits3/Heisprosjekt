@@ -4,6 +4,7 @@ import (
 	"testing"
 	"Heisprosjekt/src"
 	"Heisprosjekt/tools"
+	"Heisprosjekt/network"
 )
 
 
@@ -144,4 +145,10 @@ func TestAssignOrders(t *testing.T) {
 	tools.PrintQueue(assignedOrder2)
 	println("nextFloor =",calcNextFloor(assignedOrder3))
 	tools.PrintQueue(assignedOrder3)
+}
+
+func TestQueueHandler(t *testing.T) {
+	go network.NetworkHandler()
+
+	QueueHandler()
 }
