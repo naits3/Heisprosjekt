@@ -3,25 +3,32 @@ package main
 import(
 	"Heisprosjekt/network"
 	//"Heisprosjekt/src"
-	"Heisprosjekt/tools"
-	//"Heisprosjekt/queue"
+	//"Heisprosjekt/tools"
+	"Heisprosjekt/queue"
+	"runtime"
 )
 
 
 
 func main(){
-
-	go tools.BroadcastElevatorData()
+	runtime.GOMAXPROCS(runtime.NumCPU())
+	//var testData src.ElevatorData // FOR TESTING ONLY
 	go network.NetworkHandler()
-	
-	for {
-		select {
-			case data := <- network.ChDataToQueue:
-				tools.PrintQueue(data)
-			case <- network.ChReadyToMerge:
-				println("Ready to merge!")			
+	go queue.QueueHandler()
 
-		}
+	// FOR TESTING: ----------------
+	// for {
+	// 	select {
+	// 		case <- network.ChDataToQueue:
+	// 			print("Data!")
+	// 		case <- network.ChReadyToMerge:
+	// 			print("Ready to merge!")
+	// 			network.ChQueueReadyToBeSent <- testData
+	// 	}
+	// }
+
+	for {
+
 	}
 }
 

@@ -13,6 +13,6 @@ func Pack(unpackedMessage src.ElevatorData) []byte {
 
 func Unpack(packedMessage []byte) src.ElevatorData {
 	var unpackedMessage src.ElevatorData
-	json.Unmarshal(packedMessage, unpackedMessage)
+	json.Unmarshal(packedMessage, &unpackedMessage)
 	return unpackedMessage
 }
