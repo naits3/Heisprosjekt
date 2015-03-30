@@ -11,7 +11,6 @@ import "Heisprosjekt/src"
 import "runtime"
 import "fmt"
 
-
 func InitIo(chCommandFromControl chan src.Command, chButtonOrderToControl chan src.ButtonOrder, chFloorSensorToControl chan int){
 
 	chButtonOrder := make(chan src.ButtonOrder)
@@ -25,10 +24,8 @@ func InitIo(chCommandFromControl chan src.Command, chButtonOrderToControl chan s
 	}
 
 	go ioHandler(chCommandFromControl,chButtonOrderToControl,chFloorSensorToControl,chButtonOrder,chFloorSensor)
-
-	// go pollButtonOrders(chButtonOrder)
-
 	go pollFloorSensors(chFloorSensor)
+	go pollButtonOrders(chButtonOrder)
 }
 
 func ioHandler(chCommandFromControl chan src.Command, chButtonOrderToControl chan src.ButtonOrder,chFloorSensorToControl chan int, chButtonOrder chan src.ButtonOrder, chFloorSensor chan int){
@@ -46,25 +43,24 @@ func ioHandler(chCommandFromControl chan src.Command, chButtonOrderToControl cha
 	}
 }
 
-// func pollButtonOrders(chButtonOrder chan src.ButtonOrder){
-// 	//TODO: Test funksjonen og fiks problemet med slices!!!
-// 	for{
-// 		for floor := 0; floor < n_floor; floor++ {
+func pollButtonOrders(chButtonOrder chan src.ButtonOrder){
+	for{
+		for floor := 0; floor < src.N_FLOORS; floor++{
 			
-// 			if(floor > 0 && driver.GetButtonSignal(src.BUTTON_UP,floor)==1){
-// 				chButtonOrder <- []int{0,floor}
-// 			}
+			if(floor > src.FLOOR_1 && driver.GetButtonSignal(src.BUTTON_UP,floor)==1){
+				chButtonOrder <- src.ButtonOrder{floor, src.BUTTON_UP}
+			}
 			
-// 			if(floor < n_floor-2 && driver.GetButtonSignal(src.BUTTON_DOWN,floor)==1){
-// 				chButtonOrder <- []int{1,floor}
-// 			}
+			if(floor < src.N_FLOOR-2 && driver.GetButtonSignal(src.BUTTON_DOWN,floor)==1){
+				chButtonOrder <- src.ButtonOrder{floor, src.BUTTON_DOWN}
+			}
 			
-// 			if(driver.GetButtonSignal(src.BUTTON_INSIDE,floor)==1){
-// 				chButtonOrder <- []int{2,floor}
-// 			}
-// 		}
-// 	}
-// }
+			if(driver.GetButtonSignal(src.BUTTON_INSIDE,floor)==1){
+				chButtonOrder <- src.ButtonOrder{floor, src.BUTTON_INSIDE}
+			}
+		}
+	}
+}
 
 func pollFloorSensors(chFloorSensor chan int){
 	for{
