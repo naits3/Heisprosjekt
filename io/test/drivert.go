@@ -22,12 +22,12 @@ func main() {
 
 
 
-	// go runElevator(done)
+	 go runElevator(done)
  //    go floorsensor()
- //    go buttonSignalUp(done)
+  //    go buttonSignalUp(done)
 	// go buttonSignalDown(done)
 	//go buttonSignalInside(done)
-	go setButtonLamp()
+	//go setButtonLamp()
 	// go setFloorIndicatorLamp()
 
 	<-done
