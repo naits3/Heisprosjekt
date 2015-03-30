@@ -20,6 +20,11 @@ const (
 	DELETE_ORDER = -1
 )
 
+const(
+	OFF			=  0
+	ON 			=  1
+)
+
 type ButtonOrder struct{
 	Floor 		int
 	ButtonType 	int 
@@ -32,3 +37,18 @@ type ElevatorData struct {
 	OutsideOrders [N_FLOORS][2]int
 	InsideOrders  [N_FLOORS]int
 }
+
+type Command struct{
+	CommandType int
+	Value int	
+}
+
+const(
+	SET_BUTTON_LAMP				= 0
+	SET_MOTOR_DIR				= 1
+	SET_FLOOR_INDICATOR_LAMP	= 2
+	SET_DOOR_OPEN_LAMP			= 3
+)
+
+
+
