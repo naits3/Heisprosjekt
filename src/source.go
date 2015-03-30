@@ -2,17 +2,6 @@ package src
 
 const N_FLOORS = 4
 
-const(
-	BUTTON_UP 		= 0
-	BUTTON_DOWN		= 1
-	BUTTON_INSIDE	= 2
-)
-	
-const(
-	DIR_DOWN 	= -1
-	DIR_STOP    =  0
-	DIR_UP      =  1
-)
 
 const (
 	ORDER = 1
@@ -20,10 +9,6 @@ const (
 	DELETE_ORDER = -1
 )
 
-const(
-	OFF			=  0
-	ON 			=  1
-)
 
 type ButtonOrder struct{
 	Floor 		int
@@ -40,7 +25,9 @@ type ElevatorData struct {
 
 type Command struct{
 	CommandType int
-	Value int	
+	SetValue int
+	Floor int
+	ButtonType int
 }
 
 const(
@@ -50,5 +37,33 @@ const(
 	SET_DOOR_OPEN_LAMP			= 3
 )
 
+//Values
+const(
+	DIR_DOWN 	= -1
+	DIR_STOP    =  0
+	DIR_UP      =  1
+)
+
+const(
+	OFF			=  0
+	ON 			=  1
+)
+
+//Floors
+const(
+	FLOOR_NONE	= -1
+	FLOOR_1		=  0
+	FLOOR_2		=  1
+	FLOOR_3		=  2
+	FLOOR_4		=  3
+)
+
+//ButtonType
+const(
+	BUTTON_NONE		=-1
+	BUTTON_UP 		= 0
+	BUTTON_DOWN		= 1
+	BUTTON_INSIDE	= 2
+)
 
 

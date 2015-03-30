@@ -12,7 +12,7 @@ import "runtime"
 import "fmt"
 
 
-func InitializeIo(chCommandFromControl chan src.Command, chButtonOrderToControl chan src.ButtonOrder, chFloorSensorToControl chan int){
+func InitIo(chCommandFromControl chan src.Command, chButtonOrderToControl chan src.ButtonOrder, chFloorSensorToControl chan int){
 
 	chButtonOrder := make(chan src.ButtonOrder)
 	chFloorSensor  	:= make(chan int)
@@ -28,20 +28,16 @@ func InitializeIo(chCommandFromControl chan src.Command, chButtonOrderToControl 
 
 	// go pollButtonOrders(chButtonOrder)
 
-	// go pollFloorSensors(chFloorSensor)
+	go pollFloorSensors(chFloorSensor)
 }
 
-
-func ioHandler(chCommandFromControl chan src.Command, chButtonOrderToControl chan src.ButtonOrder,
-					chFloorSensorToControl chan int, chButtonOrder chan src.ButtonOrder, chFloorSensor chan int){
+func ioHandler(chCommandFromControl chan src.Command, chButtonOrderToControl chan src.ButtonOrder,chFloorSensorToControl chan int, chButtonOrder chan src.ButtonOrder, chFloorSensor chan int){
 	for{
 		select{
-			case order:=<- chButtonOrder:
-				//send order
+			case order :=<- chButtonOrder:
 				chButtonOrderToControl <- order
 
-			case floor:= <- chFloorSensor:
-				//send newfloor
+			case floor := <- chFloorSensor:
 				chFloorSensorToControl <- floor
 
 			case command := <- chCommandFromControl:
@@ -70,15 +66,13 @@ func ioHandler(chCommandFromControl chan src.Command, chButtonOrderToControl cha
 // 	}
 // }
 
-// func pollFloorSensors(chFloorSensor chan int){
-// 	//TODO: Test funksjonen
-// 	for{	
-// 		if floor := driver.GetFloorSensor(); floor != -1{
-// 		chFloorSensor <- floor
-// 		}
-// 	}
-// }
-
+func pollFloorSensors(chFloorSensor chan int){
+	for{
+		if floor := int(C.elev_get_floor_sensor_signal()); floor != -1{
+			chFloorSensor <- floor
+		}
+	}
+}
 
 func doCommand(command src.Command){
 	//TODO  Fiks enum problemet med typer.
@@ -86,19 +80,16 @@ func doCommand(command src.Command){
 	switch commandType := command.CommandType; commandType{
 		
 		case src.SET_MOTOR_DIR:
-			fmt.Println(command.Value)
-			C.elev_set_motor_direction(C.elev_motor_direction_t(command.Value))
+			C.elev_set_motor_direction(C.elev_motor_direction_t(command.SetValue))
 		
 		case src.SET_BUTTON_LAMP:
-			//SET BUTTON LAMP
-			// driver.SetButtonLamp(1, command.floor, command.value)
+			C.elev_set_button_lamp(C.elev_button_type_t(command.ButtonType), C.int(command.Floor), C.int(command.SetValue))
 		
 		case src.SET_FLOOR_INDICATOR_LAMP:
-			// SET FLOOR INDICATOR
-			// driver.SetFloorIndicatorLamp(command.value)
+			C.elev_set_floor_indicator(C.int(command.Floor))
 		
 		case src.SET_DOOR_OPEN_LAMP:
-			//Set door open lamp
+			C.elev_set_door_open_lamp(C.int(command.SetValue))
 	}
 
 }
