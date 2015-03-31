@@ -14,18 +14,17 @@ import "fmt"
 func InitIo(chCommandFromControl chan src.Command, chButtonOrderToControl chan src.ButtonOrder, chFloorSensorToControl chan int){
 
 	chButtonOrder := make(chan src.ButtonOrder)
-	chFloorSensor  	:= make(chan int)
+	chFloorSensor := make(chan int)
 
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	if err:=C.elev_init(); err<0{
 		fmt.Println("Could not initialize hardware")
-		//TODO Handle error, exit. Try one more time
 	}
 
 	go ioHandler(chCommandFromControl,chButtonOrderToControl,chFloorSensorToControl,chButtonOrder,chFloorSensor)
-	go pollFloorSensors(chFloorSensor)
-	go pollButtonOrders(chButtonOrder)
+	//go pollFloorSensors(chFloorSensor)
+	//go pollButtonOrders(chButtonOrder)
 }
 
 func ioHandler(chCommandFromControl chan src.Command, chButtonOrderToControl chan src.ButtonOrder,chFloorSensorToControl chan int, chButtonOrder chan src.ButtonOrder, chFloorSensor chan int){
@@ -47,15 +46,19 @@ func pollButtonOrders(chButtonOrder chan src.ButtonOrder){
 	for{
 		for floor := 0; floor < src.N_FLOORS; floor++{
 			
-			if(floor > src.FLOOR_1 && driver.GetButtonSignal(src.BUTTON_UP,floor)==1){
-				chButtonOrder <- src.ButtonOrder{floor, src.BUTTON_UP}
+			if(floor < src.N_FLOORS-1){
+				if(int(C.elev_get_button_signal(C.elev_button_type_t(src.BUTTON_UP), C.int(floor)))==1){
+					chButtonOrder <- src.ButtonOrder{floor, src.BUTTON_UP}
+				}
 			}
 			
-			if(floor < src.N_FLOOR-2 && driver.GetButtonSignal(src.BUTTON_DOWN,floor)==1){
-				chButtonOrder <- src.ButtonOrder{floor, src.BUTTON_DOWN}
+			if(floor > src.FLOOR_1) { 
+				if(int(C.elev_get_button_signal(C.elev_button_type_t(src.BUTTON_DOWN), C.int(floor)))==1){
+					chButtonOrder <- src.ButtonOrder{floor, src.BUTTON_DOWN}
+				}
 			}
 			
-			if(driver.GetButtonSignal(src.BUTTON_INSIDE,floor)==1){
+			if(int(C.elev_get_button_signal(C.elev_button_type_t(src.BUTTON_INSIDE), C.int(floor)))==1){
 				chButtonOrder <- src.ButtonOrder{floor, src.BUTTON_INSIDE}
 			}
 		}
@@ -71,8 +74,6 @@ func pollFloorSensors(chFloorSensor chan int){
 }
 
 func doCommand(command src.Command){
-	//TODO  Fiks enum problemet med typer.
-
 	switch commandType := command.CommandType; commandType{
 		
 		case src.SET_MOTOR_DIR:
@@ -87,6 +88,5 @@ func doCommand(command src.Command){
 		case src.SET_DOOR_OPEN_LAMP:
 			C.elev_set_door_open_lamp(C.int(command.SetValue))
 	}
-
 }
 
