@@ -10,6 +10,7 @@ import "C"
 import "Heisprosjekt/src"
 import "runtime"
 import "fmt"
+import "time"
 
 func InitIo(chCommandFromControl chan src.Command, chButtonOrderToControl chan src.ButtonOrder, chFloorSensorToControl chan int){
 
@@ -23,8 +24,8 @@ func InitIo(chCommandFromControl chan src.Command, chButtonOrderToControl chan s
 	}
 
 	go ioHandler(chCommandFromControl,chButtonOrderToControl,chFloorSensorToControl,chButtonOrder,chFloorSensor)
-	//go pollFloorSensors(chFloorSensor)
-	//go pollButtonOrders(chButtonOrder)
+	go pollFloorSensors(chFloorSensor)
+	go pollButtonOrders(chButtonOrder)
 }
 
 func ioHandler(chCommandFromControl chan src.Command, chButtonOrderToControl chan src.ButtonOrder,chFloorSensorToControl chan int, chButtonOrder chan src.ButtonOrder, chFloorSensor chan int){
@@ -62,6 +63,7 @@ func pollButtonOrders(chButtonOrder chan src.ButtonOrder){
 				chButtonOrder <- src.ButtonOrder{floor, src.BUTTON_INSIDE}
 			}
 		}
+		time.Sleep(10*time.Millisecond)
 	}
 }
 
@@ -70,6 +72,7 @@ func pollFloorSensors(chFloorSensor chan int){
 		if floor := int(C.elev_get_floor_sensor_signal()); floor != -1{
 			chFloorSensor <- floor
 		}
+		time.Sleep(100*time.Millisecond)
 	}
 }
 

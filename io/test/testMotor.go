@@ -1,21 +1,20 @@
-package io
+package main
 
 import (
 	"Heisprosjekt/io"
 	"Heisprosjekt/src"
-	"testing"
 	"time"
 )
 
-func TestMotor(t *testing.T){
 
+func main() {
 	command1 := src.Command{src.SET_MOTOR_DIR,src.DIR_UP,src.FLOOR_NONE,src.BUTTON_NONE}
 	command2 := src.Command{src.SET_MOTOR_DIR,src.DIR_DOWN,src.FLOOR_NONE,src.BUTTON_NONE}
 	command3 := src.Command{src.SET_MOTOR_DIR,src.DIR_STOP,src.FLOOR_NONE,src.BUTTON_NONE}
 
-	chCommandFromControl 	:= make(chan src.Command,1)
-	chButtonOrderToControl 	:= make(chan src.ButtonOrder,1)
-	chFloorSensorToControl	:= make(chan int,1)
+	chCommandFromControl 	:= make(chan src.Command,1000)
+	chButtonOrderToControl 	:= make(chan src.ButtonOrder,1000)
+	chFloorSensorToControl	:= make(chan int,1000)
 
 	io.InitIo(chCommandFromControl, chButtonOrderToControl,chFloorSensorToControl)
 
@@ -25,8 +24,4 @@ func TestMotor(t *testing.T){
 	time.Sleep(1*time.Second)
 	chCommandFromControl <- command3
 	time.Sleep(1*time.Second)
-	u := 1
-	if u != 1{
-		t.Errorf("Error have happend")
-	}
 }
