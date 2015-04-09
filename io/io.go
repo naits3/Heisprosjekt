@@ -90,6 +90,6 @@ func doCommand(command src.Command){
 		
 		case src.SET_DOOR_OPEN_LAMP:
 			C.elev_set_door_open_lamp(C.int(command.SetValue))
-	}
+	} // Feilhaandtering
 }
 

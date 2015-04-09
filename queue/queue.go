@@ -285,6 +285,7 @@ func QueueHandler() {
 	chNewOrder 		:= make(chan src.ButtonOrder)
 	chNewDirection	:= make(chan int)
 	chOrderIsFinished 	:= make(chan src.ButtonOrder)
+	// Delete the above, and create them in ctonrller instead
 
 	IPaddr := network.GetIPAddress()
 	IPaddrArray := strings.Split(IPaddr, ".")
@@ -311,6 +312,7 @@ func QueueHandler() {
 				assignedOrder := assignOrders(allElevatorData, mergedQueue)
 				nextFloor := calcNextFloor(assignedOrder)
 				listOfIncomingData = nil
+				// send knownOrders and nextFloor to controller
 
 				// FOR TESTING: ------------------
 				println("Assigned Queue: ")
