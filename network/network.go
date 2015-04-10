@@ -11,7 +11,7 @@ import (
 const PORT = "20019"	
 var IP string
 var connectionStatus = make(map[string]bool) //map[IP]status
-var pingTimeLimit time.Duration = 5*time.Second
+var pingTimeLimit time.Duration = 1*time.Second
 
 type networkMessage struct {
 	address string
@@ -25,13 +25,16 @@ var ChQueueReadyToBeSent = make(chan src.ElevatorData)
 
 //TESTED:
 func sendPing(broadcastConn *net.UDPConn, chOutgoingData chan src.ElevatorData){
+	var dataToSend src.ElevatorData
+			
 	for {
 		select {
 			case outgoingData := <- chOutgoingData:
-				broadcastConn.Write(Pack(outgoingData))
+				dataToSend = outgoingData
 
 			default:
-				time.Sleep(10*time.Millisecond)
+				broadcastConn.Write(Pack(dataToSend))
+				time.Sleep(200*time.Millisecond)
 		}
 	}
 }
@@ -168,7 +171,6 @@ func NetworkHandler() {
 // * Can we send faster than pingLimit?						|
 // * send the received orders to queue 						| OK
 // * make it so we don't receive our queue thru connection 	| OK 
-// * While no IP, check if we have. Update to queue			|
 // * send unique queues only to Queue modules				| OK
 
 
