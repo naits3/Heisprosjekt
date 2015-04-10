@@ -18,7 +18,6 @@ var chFloorSensor = make(chan int)
 
 func InitIo(chCommandFromControl chan src.Command, chButtonOrderToControl chan src.ButtonOrder, chFloorSensorToControl chan int){
 	
-
 	runtime.GOMAXPROCS(1)
 
 	if err:=C.elev_init(); err<0{
@@ -29,7 +28,6 @@ func InitIo(chCommandFromControl chan src.Command, chButtonOrderToControl chan s
 	go pollFloorSensors()
 	go pollButtonOrders()
 }
-
 func ioHandler(chCommandFromControl chan src.Command, chButtonOrderToControl chan src.ButtonOrder,chFloorSensorToControl chan int){
 	for{
 		select{
@@ -40,6 +38,7 @@ func ioHandler(chCommandFromControl chan src.Command, chButtonOrderToControl cha
 				chFloorSensorToControl <- floor
 
 			case command := <- chCommandFromControl:
+				println("got command")
 				doCommand(command)
 		}
 	}
@@ -75,34 +74,43 @@ func pollFloorSensors(){
 		if floor := int(C.elev_get_floor_sensor_signal()); floor != -1{
 			chFloorSensor <- floor
 		}
-		time.Sleep(10*time.Millisecond)
-		
+		time.Sleep(100*time.Millisecond)
 	}
 }
 
 func doCommand(command src.Command){
 	switch commandType := command.CommandType; commandType{
 		case src.SET_MOTOR_DIR:
+			println("Setting motordir")
+			println(command.SetValue)
 			C.elev_set_motor_direction(C.elev_motor_direction_t(command.SetValue))
 		
 		case src.SET_BUTTON_LAMP:
+			println("Setting Button Lamp")
 			switch buttonType := command.ButtonType;buttonType{
 				case src.BUTTON_UP:
 					if(command.Floor < src.N_FLOORS-1) {
 						C.elev_set_button_lamp(C.elev_button_type_t(command.ButtonType), C.int(command.Floor), C.int(command.SetValue))
+						println(command.SetValue)
 					}
 				case src.BUTTON_DOWN:
-					if(command.Floor > 0) {
+					if(command.Floor > 0){
 						C.elev_set_button_lamp(C.elev_button_type_t(command.ButtonType), C.int(command.Floor), C.int(command.SetValue))
+						println(command.SetValue)
 					}
 				case src.BUTTON_INSIDE:
 					C.elev_set_button_lamp(C.elev_button_type_t(command.ButtonType), C.int(command.Floor), C.int(command.SetValue))
-			}
+					println(command.SetValue)
+			}		
+			
 
 		case src.SET_FLOOR_INDICATOR_LAMP:
+			println("Setting floor indicator lamp")
 			C.elev_set_floor_indicator(C.int(command.Floor))
+			println("Done floor indicator lamp")
 		
 		case src.SET_DOOR_OPEN_LAMP:
+			println("setting lamp")
 			C.elev_set_door_open_lamp(C.int(command.SetValue))
 	}
 }
