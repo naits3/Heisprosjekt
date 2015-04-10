@@ -41,6 +41,9 @@ func ioHandler(chCommandFromControl chan src.Command, chButtonOrderToControl cha
 
 			case command := <- chCommandFromControl:
 				doCommand(command)
+			default:
+				time.Sleep(10*time.Millisecond)
+
 		}
 	}
 }
@@ -74,7 +77,7 @@ func pollFloorSensors(){
 		if floor := int(C.elev_get_floor_sensor_signal()); floor != -1{
 			chFloorSensor <- floor
 		}
-		time.Sleep(100*time.Millisecond)
+		time.Sleep(200*time.Millisecond)
 	}
 }
 

@@ -49,15 +49,6 @@ const(
 	ON 			=  1
 )
 
-//Floors
-const(
-	FLOOR_NONE	= -1
-	FLOOR_1		=  0
-	FLOOR_2		=  1
-	FLOOR_3		=  2
-	FLOOR_4		=  3
-)
-
 //ButtonType
 const(
 	BUTTON_NONE		=-1
