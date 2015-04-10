@@ -288,6 +288,7 @@ func QueueHandler() {
 	// Delete the above, and create them in ctonrller instead
 
 	IPaddr := network.GetIPAddress()
+	println(IPaddr) // DELETE
 	IPaddrArray := strings.Split(IPaddr, ".")
 	knownOrders.ID, _ = strconv.Atoi(IPaddrArray[3])
 
