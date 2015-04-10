@@ -7,7 +7,7 @@ import (
 	"Heisprosjekt/src"
 )
 
-const PORT = "80"	
+const PORT = "20019"	
 var IP string
 var connectionStatus = make(map[string]bool) //map[IP]status
 var pingTimeLimit time.Duration = 10*time.Second
@@ -34,23 +34,25 @@ func sendPing(broadcastConn *net.UDPConn, chSendData chan src.ElevatorData){
 
 //TESTED:
 func listenPing(chReceivedData chan networkMessage){
+	
 	UDPAddr, _ := net.ResolveUDPAddr("udp",":"+PORT)
 	var buffer []byte = make([]byte, 1024)
 	conn, err := net.ListenUDP("udp", UDPAddr)
 
 	if err != nil {
-			print(err)
-			return
-		}
+		println(err)
+		return
+	}
 
 	defer conn.Close()
-
 	for {
 		lengthOfMessage, IPaddressAndPort, err := conn.ReadFromUDP(buffer)
 		if err != nil {
 			print(err)
 			return
 		}
+
+		println("Got data!")
 
 		IPaddressAndPortArray := strings.Split(IPaddressAndPort.String(),":")
 		IPaddress := IPaddressAndPortArray[0]
@@ -72,6 +74,8 @@ func createBroadcastConn() *net.UDPConn{
 			ipArray[3] = "255"
 			broadcastIP = strings.Join(ipArray,".")
 	}
+
+	println("BCIP:",broadcastIP)
 
 	UDPAddr, err := net.ResolveUDPAddr("udp",broadcastIP + ":" + PORT)
 

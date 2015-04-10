@@ -32,6 +32,9 @@ func TestListenPing(t *testing.T) {
 		select {
 			case data := <- chNetworkMessage:
 				println("Got data from: ",data.address)
+
+			default:
+				time.Sleep(10*time.Millisecond)
 		}
 	}
 }
