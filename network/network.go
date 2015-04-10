@@ -2,15 +2,16 @@ package network
 
 import (
 	"net"
+	"os"
 	"strings"
 	"time"
 	"Heisprosjekt/src"
 )
 
-const PORT = "80"	
+const PORT = "20019"	
 var IP string
 var connectionStatus = make(map[string]bool) //map[IP]status
-var pingTimeLimit time.Duration = 10*time.Second
+var pingTimeLimit time.Duration = 1*time.Second
 
 type networkMessage struct {
 	address string
@@ -23,28 +24,34 @@ var ChReadyToMerge = make(chan bool)
 var ChQueueReadyToBeSent = make(chan src.ElevatorData)
 
 //TESTED:
-func sendPing(broadcastConn *net.UDPConn, chSendData chan src.ElevatorData){
+func sendPing(broadcastConn *net.UDPConn, chOutgoingData chan src.ElevatorData){
+	var dataToSend src.ElevatorData
+			
 	for {
 		select {
-			case data := <- chSendData:
-				broadcastConn.Write(Pack(data))
+			case outgoingData := <- chOutgoingData:
+				dataToSend = outgoingData
+
+			default:
+				broadcastConn.Write(Pack(dataToSend))
+				time.Sleep(200*time.Millisecond)
 		}
 	}
 }
 
 //TESTED:
 func listenPing(chReceivedData chan networkMessage){
+	
 	UDPAddr, _ := net.ResolveUDPAddr("udp",":"+PORT)
 	var buffer []byte = make([]byte, 1024)
 	conn, err := net.ListenUDP("udp", UDPAddr)
 
 	if err != nil {
-			print(err)
-			return
-		}
+		println(err)
+		return
+	}
 
 	defer conn.Close()
-
 	for {
 		lengthOfMessage, IPaddressAndPort, err := conn.ReadFromUDP(buffer)
 		if err != nil {
@@ -54,7 +61,6 @@ func listenPing(chReceivedData chan networkMessage){
 
 		IPaddressAndPortArray := strings.Split(IPaddressAndPort.String(),":")
 		IPaddress := IPaddressAndPortArray[0]
-
 				
 		chReceivedData <- networkMessage{ IPaddress, buffer[:lengthOfMessage] }
 	}
@@ -62,17 +68,13 @@ func listenPing(chReceivedData chan networkMessage){
 
 // TESTED:
 func createBroadcastConn() *net.UDPConn{
-	broadcastIP := GetIPAddress()
-	
-	switch(broadcastIP) {
-		case "127.0.0.1":
-			break
-		default:
-			ipArray := strings.Split(broadcastIP,".")
-			ipArray[3] = "255"
-			broadcastIP = strings.Join(ipArray,".")
-	}
 
+	broadcastIP := GetIPAddress()
+
+	ipArray := strings.Split(broadcastIP,".")
+	ipArray[3] = "255"
+	broadcastIP = strings.Join(ipArray,".")
+	
 	UDPAddr, err := net.ResolveUDPAddr("udp",broadcastIP + ":" + PORT)
 
 	broadcastConn, err := net.DialUDP("udp",nil,UDPAddr)
@@ -82,28 +84,25 @@ func createBroadcastConn() *net.UDPConn{
 
 
 func GetIPAddress() string {
+
 	addrs, err := net.InterfaceAddrs()
-     if err != nil {
-        println(err)
+    if err != nil {
+    	println(err)
 		// error handle here                
-     }
+    }
 
-     for _, address := range addrs {
-
-     	// check the address type and if it is not a loopback the display it
+    for _, address := range addrs {
         if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
         	if ipnet.IP.To4() != nil {
             	return ipnet.IP.String()
         	}
-       }
+    	}
     }
-	return "127.0.0.1"
-
-	// Vi får et problem dersom heisen vår er frakoblet i oppstart, og skal koble seg på nettet seinere.
-	// Én løsning er å slette denne funksjonen, og sette IP direkte. 
-	// ... Eller ikke. Hvordan vil vi da kunne sende kø i offline?
+	
+	println("Cannot resolve IP address! Exiting..")
+	os.Exit(1)
+	return ""
 }
-
 
 // TESTED:
 func timer(timeout chan bool) {
@@ -118,8 +117,8 @@ func NetworkHandler() {
 	chTimeout := make(chan bool)
 	chReceivedData := make(chan networkMessage)
 	chSendData := make(chan src.ElevatorData)
-	
-	IP = GetIPAddress()
+
+	IP = GetIPAddress()	
 	broadcastConn := createBroadcastConn()
 
 	go listenPing(chReceivedData)
@@ -129,6 +128,7 @@ func NetworkHandler() {
 	for { 
 		select {
 			case data := <- chReceivedData:
+				
 				alreadyReceived := false
 				for storedAddress, status := range connectionStatus {
 					if data.address == storedAddress && status == true {
@@ -140,7 +140,7 @@ func NetworkHandler() {
 					break
 				}
 
-				println("received from: ", data.address)
+				println("Received from: ", data.address)
 				connectionStatus[data.address] = true
 				ChDataToQueue <- Unpack(data.elevatorData)
 
@@ -148,16 +148,18 @@ func NetworkHandler() {
 				chSendData <- outGoingData
 
 			case <- chTimeout:
+				println("Elevators: ") // FOR TESTING!
 				for address, status := range connectionStatus{
 					println(address)
 					switch status {
 						case true:
 							connectionStatus[address] = false
+							println(address) // FOR TESTING!
 						case false:
 							delete(connectionStatus, address)
 					}
 				}
-
+				println(" ") // FOR TESTING
 				ChReadyToMerge <- true
 		}
 	}
@@ -166,8 +168,9 @@ func NetworkHandler() {
 // TODO:
 
 // * implement sendPing() 									| OK
-// * handle connections when a elevator does not respond	|
+// * Can we send faster than pingLimit?						|
 // * send the received orders to queue 						| OK
-// * make it so we don't receive our queue thru connection 	| 
-// * set IPadress manually									|
-// * send unique queues only to Queue modules				| 
+// * make it so we don't receive our queue thru connection 	| OK 
+// * send unique queues only to Queue modules				| OK
+
+
