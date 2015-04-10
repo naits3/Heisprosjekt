@@ -31,11 +31,11 @@ func TestMotor(t *testing.T){
 	InitIo(chCommandFromControl, chButtonOrderToControl,chFloorSensorToControl)
 
 	chCommandFromControl <- command1
-	time.Sleep(1*time.Second)
+	//time.Sleep(1*time.Second)
 	chCommandFromControl <- command2
-	time.Sleep(1*time.Second)
+	//time.Sleep(1*time.Second)
 	chCommandFromControl <- command3
-	time.Sleep(1*time.Second)
+	//time.Sleep(1*time.Second)
 
 	
 }
@@ -44,7 +44,7 @@ func TestMotor(t *testing.T){
 func TestSetButtonLight(t *testing.T){
 
 	command1 := src.Command{src.SET_BUTTON_LAMP,src.ON,1,src.BUTTON_INSIDE}
-	command2 := src.Command{src.SET_BUTTON_LAMP,src.ON,3,src.BUTTON_DOWN}
+	command2 := src.Command{src.SET_BUTTON_LAMP,src.ON,1,src.BUTTON_DOWN}
 	command3 := src.Command{src.SET_BUTTON_LAMP,src.ON,2,src.BUTTON_UP}
 
 	chCommandFromControl 	:= make(chan src.Command)
@@ -53,13 +53,12 @@ func TestSetButtonLight(t *testing.T){
 
 	InitIo(chCommandFromControl, chButtonOrderToControl,chFloorSensorToControl)
 
-	time.Sleep(1*time.Second)
+
 	chCommandFromControl <- command1
-	time.Sleep(1*time.Second)
+	println("command1 done")
 	chCommandFromControl <- command2
-	time.Sleep(1*time.Second)
+	println("command2 done")
 	chCommandFromControl <- command3
-	time.Sleep(1*time.Second)
 }
 
 
@@ -99,13 +98,11 @@ func TestSetFloorIndicator(t *testing.T){
 
 
 	chCommandFromControl <- command1
-	
-	//time.Sleep(1*time.Second)
+	time.Sleep(1*time.Second)
 	chCommandFromControl <- command2
-	
-	//time.Sleep(1*time.Second)
+	time.Sleep(1*time.Second)
 	chCommandFromControl <- command3
-	//time.Sleep(1*time.Second)
+	time.Sleep(1*time.Second)
 }
 
 

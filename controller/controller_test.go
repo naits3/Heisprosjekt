@@ -25,8 +25,8 @@ func TestLSetLights(t *testing.T){
 
 	var testData1 src.ElevatorData
 	testData1.OutsideOrders[2][src.BUTTON_DOWN] = src.ORDER
-	testData1.OutsideOrders[1][src.BUTTON_DOWN] = src.ORDER
-	testData1.OutsideOrders[1][src.BUTTON_UP] = src.ORDER
+	testData1.OutsideOrders[0][src.BUTTON_UP] = src.ORDER
+	testData1.OutsideOrders[3][src.BUTTON_DOWN] = src.ORDER
 	testData1.ID = 1
 
 	setLights(testData1)
@@ -52,7 +52,32 @@ func TestSetLights(t *testing.T){
 	// tools.PrintQueue(testData1)
 	chNewOrdersFromQueue <- testData1
 
-	<-chNewFloor
+	time.Sleep(1*time.Second)
+}
+
+func TestReciveOrder(t *testing.T){
+	InitController()
+	
+	for{
+		println("Push a button:")
+		order := <- chNewOrder
+		println(order.ButtonType)
+		println(order.Floor)
+		break
+ 	}
+}
+
+func TestNextFloor(t *testing.T) {
+	InitController()
+	println("waiting for lunch")
+	println()
+	time.Sleep(time.Second)
+
+	// Send in your floor here:
+
+	chNewNextFloorFromQueue <- 1
+
+	<- chNewFloor
 
 }
 
