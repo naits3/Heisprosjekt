@@ -60,6 +60,7 @@ func listenPing(chReceivedData chan networkMessage){
 				
 		chReceivedData <- networkMessage{ IPaddress, buffer[:lengthOfMessage] }
 	}
+
 }
 
 // TESTED:
