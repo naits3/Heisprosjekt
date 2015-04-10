@@ -12,10 +12,12 @@ import "runtime"
 import "fmt"
 import "time"
 
-func InitIo(chCommandFromControl chan src.Command, chButtonOrderToControl chan src.ButtonOrder, chFloorSensorToControl chan int){
 
-	chButtonOrder := make(chan src.ButtonOrder)
-	chFloorSensor := make(chan int)
+var chButtonOrder = make(chan src.ButtonOrder)
+var chFloorSensor = make(chan int)
+
+func InitIo(chCommandFromControl chan src.Command, chButtonOrderToControl chan src.ButtonOrder, chFloorSensorToControl chan int){
+	
 
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
@@ -23,12 +25,12 @@ func InitIo(chCommandFromControl chan src.Command, chButtonOrderToControl chan s
 		fmt.Println("Could not initialize hardware")
 	}
 
-	go ioHandler(chCommandFromControl,chButtonOrderToControl,chFloorSensorToControl,chButtonOrder,chFloorSensor)
-	go pollFloorSensors(chFloorSensor)
-	go pollButtonOrders(chButtonOrder)
+	go ioHandler(chCommandFromControl,chButtonOrderToControl,chFloorSensorToControl)
+	go pollFloorSensors()
+	go pollButtonOrders()
 }
 
-func ioHandler(chCommandFromControl chan src.Command, chButtonOrderToControl chan src.ButtonOrder,chFloorSensorToControl chan int, chButtonOrder chan src.ButtonOrder, chFloorSensor chan int){
+func ioHandler(chCommandFromControl chan src.Command, chButtonOrderToControl chan src.ButtonOrder,chFloorSensorToControl chan int){
 	for{
 		select{
 			case order :=<- chButtonOrder:
@@ -43,7 +45,7 @@ func ioHandler(chCommandFromControl chan src.Command, chButtonOrderToControl cha
 	}
 }
 
-func pollButtonOrders(chButtonOrder chan src.ButtonOrder){
+func pollButtonOrders(){
 	for{
 		for floor := 0; floor < src.N_FLOORS; floor++{
 			
@@ -53,7 +55,7 @@ func pollButtonOrders(chButtonOrder chan src.ButtonOrder){
 				}
 			}
 			
-			if(floor > src.FLOOR_1) { 
+			if(floor > 0) { 
 				if(int(C.elev_get_button_signal(C.elev_button_type_t(src.BUTTON_DOWN), C.int(floor)))==1){
 					chButtonOrder <- src.ButtonOrder{floor, src.BUTTON_DOWN}
 				}
@@ -67,7 +69,7 @@ func pollButtonOrders(chButtonOrder chan src.ButtonOrder){
 	}
 }
 
-func pollFloorSensors(chFloorSensor chan int){
+func pollFloorSensors(){
 	for{
 		if floor := int(C.elev_get_floor_sensor_signal()); floor != -1{
 			chFloorSensor <- floor
@@ -83,13 +85,23 @@ func doCommand(command src.Command){
 			C.elev_set_motor_direction(C.elev_motor_direction_t(command.SetValue))
 		
 		case src.SET_BUTTON_LAMP:
-			C.elev_set_button_lamp(C.elev_button_type_t(command.ButtonType), C.int(command.Floor), C.int(command.SetValue))
-		
+			switch buttonType := command.ButtonType;buttonType{
+				case src.BUTTON_UP:
+					if(command.Floor < src.N_FLOORS-1) {
+						C.elev_set_button_lamp(C.elev_button_type_t(command.ButtonType), C.int(command.Floor), C.int(command.SetValue))
+					}
+				case src.BUTTON_DOWN:
+					if(command.Floor > 0) {
+						C.elev_set_button_lamp(C.elev_button_type_t(command.ButtonType), C.int(command.Floor), C.int(command.SetValue))
+					}
+				case src.BUTTON_INSIDE:
+					C.elev_set_button_lamp(C.elev_button_type_t(command.ButtonType), C.int(command.Floor), C.int(command.SetValue))
+			}
 		case src.SET_FLOOR_INDICATOR_LAMP:
 			C.elev_set_floor_indicator(C.int(command.Floor))
 		
 		case src.SET_DOOR_OPEN_LAMP:
 			C.elev_set_door_open_lamp(C.int(command.SetValue))
-	} // Feilhaandtering
+	}
 }
 
