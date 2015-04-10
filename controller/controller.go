@@ -16,7 +16,6 @@ var state int
 var nextFloor int
 var currentFloor int
 
-
 var chCommandFromControl 	= make(chan src.Command)
 var chButtonOrderToControl 	= make(chan src.ButtonOrder)
 var chFloorSensorToControl	= make(chan int)
@@ -29,60 +28,61 @@ var chOrderIsFinished 		= make(chan src.ButtonOrder)
 var chNewOrdersFromQueue 	= make(chan src.ElevatorData)
 var chNewNextFloorFromQueue = make(chan int)
 
-
 func InitController() {
 	
 	io.InitIo(chCommandFromControl, chButtonOrderToControl, chFloorSensorToControl)
 	
 	goDownUntilReachFloor()	
 	state = IDLE
-	
-
 	// InitQueue(channels here...) // Let Queue init network
+	
+	controllerHandler()
 }
 
-// func controllerHandler(){
-// 	for {
-// 		select {
-// 			case ioOrder:= <- chButtonOrderToControl:
-// 				switch state{
-// 					case IDLE:
+func controllerHandler(){
+	for {
+		select {
+			case ioOrder:= <- chButtonOrderToControl:
+				switch state{
+					case IDLE:
 
-// 					case MOVING:
+					case MOVING:
 
-// 					case DOOR_OPEN:
+					case DOOR_OPEN:
 
-// 				}
-// 				chNewOrder <- ioOrder
+				}
+				chNewOrder <- ioOrder
 
-// 			case currentFloor = <-chFloorSensorToControl:
-// 				switch state{
-// 					case IDLE:
-// 						if currentFloor != nextFloor{
-// 							//move to the next floor
-// 						}
-// 					case MOVING:
-// 						if currentFloor != nextFloor{
-// 							//move to the next floor
-// 						}
-// 					default:
-// 						continue
-// 				}
-// 				chNewFloor <- currentFloor
+			case currentFloor = <-chFloorSensorToControl:
+				switch state{
+					case IDLE:
+						if currentFloor != nextFloor{
+							//move to the next floor
+						}
+					case MOVING:
+						if currentFloor != nextFloor{
+							//move to the next floor
+						}
+					default:
+						continue
+				}
+				chNewFloor <- currentFloor
 
-// 			case QueueOrders := <-chNewOrdersFromQueue:
-// 				switch state{
-// 					default:
-// 						setLights(QueueOrders[0])
-// 						nextFloor = QueueOrders[1]
-// 				}
+			case QueueOrders := <-chNewOrdersFromQueue:
+				switch state{
+					default:
+						setLights(QueueOrders[0])
+						nextFloor = QueueOrders[1]
+				}]
 
-// 			case nextFloor = <-chNewNextFloorFromQueue:
-// 				continue				
-// 			}
-// 		}
-// 	}
-// }
+
+			case nextFloor = <-chNewNextFloorFromQueue:
+				continue				
+			}
+		}
+	}
+}
+
 
 func setLights(knowOrders src.ElevatorData){
 	for floor := 1; floor < src.N_FLOORS; floor ++ {
@@ -98,4 +98,5 @@ func goDownUntilReachFloor(){
 	currentFloor = <- chFloorSensorToControl
 	chCommandFromControl <- src.Command{src.SET_MOTOR_DIR,src.DIR_STOP,-1,src.BUTTON_NONE}
 	chCommandFromControl <- src.Command{src.SET_FLOOR_INDICATOR_LAMP,src.ON,currentFloor,src.BUTTON_NONE}
+
 }

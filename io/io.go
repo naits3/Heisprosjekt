@@ -19,7 +19,7 @@ var chFloorSensor = make(chan int)
 func InitIo(chCommandFromControl chan src.Command, chButtonOrderToControl chan src.ButtonOrder, chFloorSensorToControl chan int){
 	
 
-	runtime.GOMAXPROCS(runtime.NumCPU())
+	runtime.GOMAXPROCS(1)
 
 	if err:=C.elev_init(); err<0{
 		fmt.Println("Could not initialize hardware")
@@ -41,9 +41,6 @@ func ioHandler(chCommandFromControl chan src.Command, chButtonOrderToControl cha
 
 			case command := <- chCommandFromControl:
 				doCommand(command)
-			default:
-				time.Sleep(10*time.Millisecond)
-
 		}
 	}
 }
@@ -67,8 +64,9 @@ func pollButtonOrders(){
 			if(int(C.elev_get_button_signal(C.elev_button_type_t(src.BUTTON_INSIDE), C.int(floor)))==1){
 				chButtonOrder <- src.ButtonOrder{floor, src.BUTTON_INSIDE}
 			}
+			time.Sleep(10*time.Millisecond)
 		}
-		time.Sleep(10*time.Millisecond)
+		
 	}
 }
 
@@ -77,13 +75,13 @@ func pollFloorSensors(){
 		if floor := int(C.elev_get_floor_sensor_signal()); floor != -1{
 			chFloorSensor <- floor
 		}
-		time.Sleep(200*time.Millisecond)
+		time.Sleep(10*time.Millisecond)
+		
 	}
 }
 
 func doCommand(command src.Command){
 	switch commandType := command.CommandType; commandType{
-		
 		case src.SET_MOTOR_DIR:
 			C.elev_set_motor_direction(C.elev_motor_direction_t(command.SetValue))
 		
@@ -100,6 +98,7 @@ func doCommand(command src.Command){
 				case src.BUTTON_INSIDE:
 					C.elev_set_button_lamp(C.elev_button_type_t(command.ButtonType), C.int(command.Floor), C.int(command.SetValue))
 			}
+
 		case src.SET_FLOOR_INDICATOR_LAMP:
 			C.elev_set_floor_indicator(C.int(command.Floor))
 		
