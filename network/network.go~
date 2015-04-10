@@ -80,7 +80,6 @@ func createBroadcastConn() *net.UDPConn{
 	return broadcastConn
 }
 
-
 func GetIPAddress() string {
 	addrs, err := net.InterfaceAddrs()
      if err != nil {
