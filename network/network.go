@@ -10,7 +10,7 @@ import (
 const PORT = "20019"	
 var IP string
 var connectionStatus = make(map[string]bool) //map[IP]status
-var pingTimeLimit time.Duration = 10*time.Second
+var pingTimeLimit time.Duration = 5*time.Second
 
 type networkMessage struct {
 	address string
@@ -52,15 +52,11 @@ func listenPing(chReceivedData chan networkMessage){
 			return
 		}
 
-		println("Got data!")
-
 		IPaddressAndPortArray := strings.Split(IPaddressAndPort.String(),":")
 		IPaddress := IPaddressAndPortArray[0]
-
 				
 		chReceivedData <- networkMessage{ IPaddress, buffer[:lengthOfMessage] }
 	}
-
 }
 
 // TESTED:
@@ -75,8 +71,6 @@ func createBroadcastConn() *net.UDPConn{
 			ipArray[3] = "255"
 			broadcastIP = strings.Join(ipArray,".")
 	}
-
-	println("BCIP:",broadcastIP)
 
 	UDPAddr, err := net.ResolveUDPAddr("udp",broadcastIP + ":" + PORT)
 
@@ -153,16 +147,18 @@ func NetworkHandler() {
 				chSendData <- outGoingData
 
 			case <- chTimeout:
+				println("Elevators: ") // FOR TESTING!
 				for address, status := range connectionStatus{
 					println(address)
 					switch status {
 						case true:
 							connectionStatus[address] = false
+							println(address) // FOR TESTING!
 						case false:
 							delete(connectionStatus, address)
 					}
 				}
-
+				println(" ") // FOR TESTING
 				ChReadyToMerge <- true
 		}
 	}
