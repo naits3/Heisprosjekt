@@ -58,3 +58,26 @@ func BroadcastElevatorData() {
 		println("Wrote data!")
 	}
 }
+
+
+func ListenForData() {
+	UDPAddr, _ := net.ResolveUDPAddr("udp",":"+network.PORT)
+	var buffer []byte = make([]byte, 1024)
+	conn, err := net.ListenUDP("udp", UDPAddr)
+
+	if err != nil {
+		println(err)
+		return
+	}
+
+	defer conn.Close()
+	for {
+		lengthOfMessage, _, err := conn.ReadFromUDP(buffer)
+		if err != nil {
+			print(err)
+			return
+		}
+				
+		PrintQueue(network.Unpack(buffer[:lengthOfMessage]))
+	}
+}

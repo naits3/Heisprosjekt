@@ -2,6 +2,7 @@ package queue
 
 import (
 	"testing"
+	"time"
 	"Heisprosjekt/src"
 	"Heisprosjekt/tools"
 	"Heisprosjekt/network"
@@ -60,10 +61,12 @@ func TestCalcTotalCost(t *testing.T) {
 	// } 
 }
 
+
 func TestFindMinimum(t *testing.T){
 	//array := []int{8,5,3,4}
 	// println("Lowest index is: ",findMinimumCost(array))
 }
+
 
 func TestClearOutsideOrders(t *testing.T) {
 	var testData1 src.ElevatorData
@@ -94,6 +97,7 @@ func TestClearOutsideOrders(t *testing.T) {
 		tools.PrintQueue(dataArray[elevator])
 	}
 }
+
 
 func TestAssignOrders(t *testing.T) {
 	var mergedQueue src.ElevatorData
@@ -147,6 +151,26 @@ func TestAssignOrders(t *testing.T) {
 	tools.PrintQueue(assignedOrder3)
 }
 
+
+func TestRememberDO(t *testing.T) {
+
+	done := make(chan bool)
+	go network.NetworkHandler()
+	
+	knownOrders.OutsideOrders[0][1] = 1
+	knownOrders.OutsideOrders[2][1] = 1
+	knownOrders.OutsideOrders[2][0] = 1
+
+	go QueueHandler()
+
+	time.Sleep(10*time.Second)
+
+	knownOrders.OutsideOrders[2][1] = DELETE_ORDER
+
+	<- done
+}
+
+
 func TestQueueHandler(t *testing.T) {
 	go network.NetworkHandler()
 	
@@ -156,4 +180,5 @@ func TestQueueHandler(t *testing.T) {
 
 	QueueHandler()
 }
+
 
