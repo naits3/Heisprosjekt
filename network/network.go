@@ -12,8 +12,8 @@ const PORT = "20019"
 var IP string
 var connectionStatus = make(map[string]bool) //map[IP]status
 
-var timeoutLimit time.Duration = 2*time.Second
-var sendPingInterval time.Duration = 500*time.Millisecond
+var timeoutLimit time.Duration = 3*time.Second
+var sendPingInterval time.Duration = 400*time.Millisecond
 
 type networkMessage struct {
 	address string
@@ -144,7 +144,7 @@ func NetworkHandler() {
 					break
 				}
 
-				println("Received from: ", data.address)
+				//println("Received from: ", data.address)
 				connectionStatus[data.address] = true
 				ChDataToQueue <- Unpack(data.elevatorData)
 
