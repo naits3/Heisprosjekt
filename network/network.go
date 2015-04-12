@@ -11,7 +11,9 @@ import (
 const PORT = "20019"	
 var IP string
 var connectionStatus = make(map[string]bool) //map[IP]status
-var pingTimeLimit time.Duration = 1*time.Second
+
+var timeoutLimit time.Duration = 6*time.Second
+var sendPingInterval time.Duration = 3*time.Second
 
 type networkMessage struct {
 	address string
@@ -25,8 +27,8 @@ var ChQueueReadyToBeSent = make(chan src.ElevatorData)
 
 //TESTED:
 func sendPing(broadcastConn *net.UDPConn, chOutgoingData chan src.ElevatorData){
-	var dataToSend src.ElevatorData
-			
+	dataToSend := <- chOutgoingData		
+	
 	for {
 		select {
 			case outgoingData := <- chOutgoingData:
@@ -34,7 +36,7 @@ func sendPing(broadcastConn *net.UDPConn, chOutgoingData chan src.ElevatorData){
 
 			default:
 				broadcastConn.Write(Pack(dataToSend))
-				time.Sleep(200*time.Millisecond)
+				time.Sleep(sendPingInterval)
 		}
 	}
 }
@@ -85,6 +87,8 @@ func createBroadcastConn() *net.UDPConn{
 
 func GetIPAddress() string {
 
+	return "192.168.0.102" // FOR WINDOWS AND TESTING ONLY!
+
 	addrs, err := net.InterfaceAddrs()
     if err != nil {
     	println(err)
@@ -107,7 +111,7 @@ func GetIPAddress() string {
 // TESTED:
 func timer(timeout chan bool) {
 	for {
-		time.Sleep(pingTimeLimit)
+		time.Sleep(timeoutLimit)
 		timeout <- true
 	}
 }
@@ -168,7 +172,7 @@ func NetworkHandler() {
 // TODO:
 
 // * implement sendPing() 									| OK
-// * Can we send faster than pingLimit?						|
+// * Can we send faster than TimeoutLimit?					| OK
 // * send the received orders to queue 						| OK
 // * make it so we don't receive our queue thru connection 	| OK 
 // * send unique queues only to Queue modules				| OK

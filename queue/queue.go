@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"Heisprosjekt/src"
 	"Heisprosjekt/network"
-	"Heisprosjekt/tools" //
+	"Heisprosjekt/tools"
 )
 
 const (
@@ -16,12 +16,10 @@ const (
 
 var knownOrders    		src.ElevatorData
 var listOfIncomingData  []src.ElevatorData
+var storedDeletedOrder	bool
 
 
 func findMinimumCost(costArray []int, queueList []src.ElevatorData) int {
-	// This function is now influenced by a random factor - when two costs
-	// are equal, the first entry is set as minimum. This cannot be the case, 
-	// as two elevators may calculate different!
 	minValue := costArray[0]
 	minElevator := 0
 
@@ -280,6 +278,44 @@ func calcNextFloor(queueMatrix src.ElevatorData) int {
 }
 
 
+func RememberDeletedOrders(queueData src.ElevatorData) src.ElevatorData {
+	var memoOfDeletedOrders src.ElevatorData
+
+	for floor := 0; floor < src.N_FLOORS; floor ++ {
+		for direction := 0; direction < 2; direction ++ {
+			if queueData.OutsideOrders[floor][direction] == DELETE_ORDER {
+				memoOfDeletedOrders.OutsideOrders[floor][direction] = DELETE_ORDER
+				storedDeletedOrder = true
+			}
+		}
+
+		if queueData.InsideOrders[floor] == DELETE_ORDER {
+			memoOfDeletedOrders.InsideOrders[floor] = DELETE_ORDER
+			storedDeletedOrder = true
+		}
+	}
+
+	return memoOfDeletedOrders
+}
+
+
+func addDeletedOrders(queueData src.ElevatorData, memoOfDeletedOrders src.ElevatorData) src.ElevatorData {
+	for floor := 0; floor < src.N_FLOORS; floor ++ {
+		for direction := 0; direction < 2; direction ++ {
+			if memoOfDeletedOrders.OutsideOrders[floor][direction] == DELETE_ORDER {
+				queueData.OutsideOrders[floor][direction] = DELETE_ORDER
+			}
+		}
+
+		if memoOfDeletedOrders.InsideOrders[floor] == DELETE_ORDER {
+			queueData.InsideOrders[floor] = DELETE_ORDER
+		}
+	}
+
+	return queueData
+}
+
+
 func QueueHandler() {
 	chNewFloor		:= make(chan int)
 	chNewOrder 		:= make(chan src.ButtonOrder)
@@ -290,6 +326,9 @@ func QueueHandler() {
 	IPaddr := network.GetIPAddress()
 	IPaddrArray := strings.Split(IPaddr, ".")
 	knownOrders.ID, _ = strconv.Atoi(IPaddrArray[3])
+
+	storedDeletedOrder = false
+	var memoOfDeletedOrders src.ElevatorData
 
 	for {
 		select {
@@ -302,23 +341,32 @@ func QueueHandler() {
 				tools.PrintQueueArray(allElevatorData)
 				// ------------
 
+				// THis fixes the bug with deleted order may not be registered correctly.
+				if !storedDeletedOrder { memoOfDeletedOrders = RememberDeletedOrders(knownOrders)
+				} else { storedDeletedOrder = false}
+				// --------------------
+
+				network.ChQueueReadyToBeSent <- knownOrders
 				mergedQueue := mergeOrders(allElevatorData)
-				//
+				// FOR TESTING
 				println("The merged Queue: ")
 				tools.PrintQueue(mergedQueue)
-				//
+				// -------------
 				knownOrders.OutsideOrders = mergedQueue.OutsideOrders
-				network.ChQueueReadyToBeSent <- knownOrders
+
 				assignedOrder := assignOrders(allElevatorData, mergedQueue)
 				nextFloor := calcNextFloor(assignedOrder)
 				listOfIncomingData = nil
 				// send knownOrders and nextFloor to controller
+				if storedDeletedOrder { knownOrders = addDeletedOrders(knownOrders, memoOfDeletedOrders)}
+				
 
 				// FOR TESTING: ------------------
 				println("Assigned Queue: ")
 				println("next floor:", nextFloor)
 				tools.PrintQueue(assignedOrder)
 				// -------------------------------
+
 			case data := <- network.ChDataToQueue:
 				listOfIncomingData = append(listOfIncomingData, data)
 
