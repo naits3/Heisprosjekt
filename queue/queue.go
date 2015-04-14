@@ -240,8 +240,8 @@ func calcNextOrderAndFloor(queueMatrix src.ElevatorData) src.ButtonOrder {
 			}
 
 			for floor := 0; floor < queueMatrix.Floor; floor ++ {
-				if (queueMatrix.OutsideOrders[floor][src.BUTTON_DOWN] == ORDER || queueMatrix.InsideOrders[floor] == ORDER) {
-					currentOrder = src.ButtonOrder{floor, src.BUTTON_DOWN}
+				if (queueMatrix.OutsideOrders[floor][src.BUTTON_UP] == ORDER || queueMatrix.InsideOrders[floor] == ORDER) {
+					currentOrder = src.ButtonOrder{floor, src.BUTTON_UP}
 					return currentOrder
 				}
 			}
@@ -353,9 +353,9 @@ func QueueHandler(chNewFloor chan int, chNewOrder chan src.ButtonOrder, chNewDir
 			case <- network.ChReadyToMerge:
 				allElevatorData := append(listOfIncomingData, knownOrders)
 				
-				println("------------------")
-				println("Registered Queues:")
-				tools.PrintQueueArray(allElevatorData)
+				//println("------------------")
+				// println("Registered Queues:")
+				// tools.PrintQueueArray(allElevatorData)
 
 				// THis fixes the bug with deleted order may not be registered correctly.
 				if storedDeletedOrder == 0 { 
@@ -373,11 +373,14 @@ func QueueHandler(chNewFloor chan int, chNewOrder chan src.ButtonOrder, chNewDir
 				assignedOrder := assignOrders(allElevatorData, mergedQueue)
 				currentOrder = calcNextOrderAndFloor(assignedOrder)
 				listOfIncomingData = nil
-				chNewNextFloorFromQueue <- currentOrder.Floor
+
+				if (currentOrder.Floor != -1) { chNewNextFloorFromQueue <- currentOrder.Floor}
 				chNewOrdersFromQueue <- knownOrders
 				if storedDeletedOrder > 0 { knownOrders = addDeletedOrders(knownOrders, memoOfDeletedOrders)}
 				
-				tools.PrintQueueHandler(mergedQueue, assignedOrder)
+				//tools.PrintQueueHandler(mergedQueue, assignedOrder)
+				tools.PrintQueue(assignedOrder)
+				println("Next Floor:", currentOrder.Floor)
 
 			case data := <- network.ChDataToQueue:
 				listOfIncomingData = append(listOfIncomingData, data)
@@ -390,6 +393,7 @@ func QueueHandler(chNewFloor chan int, chNewOrder chan src.ButtonOrder, chNewDir
 
 			case <- chOrderIsFinished:
 				deleteOrder(currentOrder)
+				println("Order is deleted!")
 
 			case newDirection := <- chNewDirection:
 				knownOrders.Direction = newDirection

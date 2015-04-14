@@ -2,7 +2,7 @@ package controller
 
 import (
 	"Heisprosjekt/io"
-	//"Heisprosjekt/queue"
+	"Heisprosjekt/queue"
 	"Heisprosjekt/src"
 	//"Heisprosjekt/tools"
 	"time"
@@ -39,7 +39,7 @@ func InitController() {
 
 	io.InitIo(chCommandFromControl, chButtonOrderToControl, chFloorSensorToControl)
 	goDownUntilReachFloor()	
-	//queue.InitQueue(channels here...) // Let Queue init network
+	queue.InitQueue(chNewFloor, chNewOrder, chNewDirection, chOrderIsFinished, chNewOrdersFromQueue, chNewNextFloorFromQueue) // Let Queue init network
 	go controllerHandler()
 	go doorTimer()
 }
@@ -51,16 +51,19 @@ func controllerHandler(){
 				chNewOrder <- ioOrder
 
 			case currentFloor = <-chFloorSensorToControl:
+				
+				chCommandFromControl  <- src.Command{src.SET_FLOOR_INDICATOR_LAMP,src.ON,currentFloor,src.BUTTON_NONE}
+				
 				switch state{
 					case IDLE:
 						direction := findElevatorDirection()
+						chNewDirection <- direction
 						chCommandFromControl <- src.Command{src.SET_MOTOR_DIR,direction,-1,src.BUTTON_NONE}
-
 						if(direction == 0){
 							if(!orderFinished){
 								state = DOOR_OPEN
+								chCommandFromControl <- src.Command{src.SET_DOOR_OPEN_LAMP,src.ON,-1,src.BUTTON_NONE}
 								setDoorTimer <- true
-								orderFinished = true
 							}else{
 								state = IDLE
 							}
@@ -70,25 +73,28 @@ func controllerHandler(){
 
 					case MOVING:
 						direction := findElevatorDirection()
+						chNewDirection <- direction
 						chCommandFromControl <- src.Command{src.SET_MOTOR_DIR,direction,-1,src.BUTTON_NONE}
-						
+
 						if(direction == 0){
 							state = DOOR_OPEN
+							chCommandFromControl <- src.Command{src.SET_DOOR_OPEN_LAMP,src.ON,-1,src.BUTTON_NONE}
 							setDoorTimer <- true
-							orderFinished = true
-							
+
 						}else{
 							state = MOVING
 						}
 					case DOOR_OPEN:
 						continue
 					}
-				//chNewFloor <- currentFloor
+				chNewFloor <- currentFloor
 				
 				
 			case <- chTimeOut:
 					state = IDLE
+					chCommandFromControl <- src.Command{src.SET_DOOR_OPEN_LAMP,src.OFF,-1,src.BUTTON_NONE}
 					chOrderIsFinished <- true
+					orderFinished = true
 
 			case queueOrders := <-chNewOrdersFromQueue:
 				setLights(queueOrders)
@@ -118,17 +124,12 @@ func goDownUntilReachFloor(){
 
 
 func doorTimer(){
-	
-	command1 := src.Command{src.SET_DOOR_OPEN_LAMP,src.ON,-1,src.BUTTON_NONE}
-	command2 := src.Command{src.SET_DOOR_OPEN_LAMP,src.OFF,-1,src.BUTTON_NONE}
 
 	for{
 		<-setDoorTimer
 		println("openDoor")
-		chCommandFromControl <- command1
 		time.Sleep(3*time.Second)
-		println("closeDoor")
-		chCommandFromControl <- command2	
+		println("closeDoor")	
 		chTimeOut <- true		
 	}
 }
@@ -148,4 +149,6 @@ func findElevatorDirection() int {
 BUGS
 If a ordere for next floor is recived and the next floor equals the current floor, the confirmation wont be sent. 	| OK
 We may get some problems with openDoor. 																			|
+Fix floorindicator lamp
+
 */

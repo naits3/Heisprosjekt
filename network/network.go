@@ -87,7 +87,7 @@ func createBroadcastConn() *net.UDPConn{
 
 func GetIPAddress() string {
 
-	return "78.91.21.43" // FOR WINDOWS AND TESTING ONLY!
+	//return "78.91.21.43" // FOR WINDOWS AND TESTING ONLY!
 
 	addrs, err := net.InterfaceAddrs()
     if err != nil {
@@ -152,18 +152,18 @@ func NetworkHandler() {
 				chSendData <- outGoingData
 
 			case <- chTimeout:
-				println("Elevators: ") // FOR TESTING!
+				//println("Elevators: ") // FOR TESTING!
 				for address, status := range connectionStatus{
 					println(address)
 					switch status {
 						case true:
 							connectionStatus[address] = false
-							println(address) // FOR TESTING!
+							//println(address) // FOR TESTING!
 						case false:
 							delete(connectionStatus, address)
 					}
 				}
-				println(" ") // FOR TESTING
+			//	println(" ") // FOR TESTING
 				ChReadyToMerge <- true
 		}
 	}

@@ -84,16 +84,15 @@ func doCommand(command src.Command){
 				case src.BUTTON_UP:
 					if(command.Floor < src.N_FLOORS-1) {
 						C.elev_set_button_lamp(C.elev_button_type_t(command.ButtonType), C.int(command.Floor), C.int(command.SetValue))
-						println(command.SetValue)
+						
 					}
 				case src.BUTTON_DOWN:
 					if(command.Floor > 0){
 						C.elev_set_button_lamp(C.elev_button_type_t(command.ButtonType), C.int(command.Floor), C.int(command.SetValue))
-						println(command.SetValue)
+						
 					}
 				case src.BUTTON_INSIDE:
 					C.elev_set_button_lamp(C.elev_button_type_t(command.ButtonType), C.int(command.Floor), C.int(command.SetValue))
-					println(command.SetValue)
 			}		
 			
 
