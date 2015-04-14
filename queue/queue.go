@@ -16,7 +16,7 @@ const (
 
 var knownOrders    		src.ElevatorData
 var listOfIncomingData  []src.ElevatorData
-
+var currentOrder		src.ButtonOrder
 
 func findMinimumCost(costArray []int, queueList []src.ElevatorData) int {
 	minValue := costArray[0]
@@ -221,65 +221,63 @@ func calcTotalCost(queueData *src.ElevatorData) int {
 }
 
 
-func calcNextFloor(queueMatrix src.ElevatorData) int {
-	nextFloor := queueMatrix.Floor
+func calcNextOrderAndFloor(queueMatrix src.ElevatorData) src.ButtonOrder {
+	currentOrder := src.ButtonOrder{-1, src.BUTTON_NONE}
 
 	switch queueMatrix.Direction {
 		case src.DIR_UP:
 			
 			for floor := queueMatrix.Floor; floor < src.N_FLOORS; floor ++ {
 				if (queueMatrix.OutsideOrders[floor][src.BUTTON_UP] == ORDER || queueMatrix.InsideOrders[floor] == ORDER) {
-					nextFloor = floor
-					return nextFloor
+					currentOrder = src.ButtonOrder{floor, src.BUTTON_UP}
+					return currentOrder
 				}
 			}
 
 			for floor := src.N_FLOORS - 1; floor > 0; floor -- {
 				if (queueMatrix.OutsideOrders[floor][src.BUTTON_DOWN] == ORDER || queueMatrix.InsideOrders[floor] == ORDER) {
-					nextFloor = floor
-					return nextFloor
+					currentOrder = src.ButtonOrder{floor, src.BUTTON_DOWN}
+					return currentOrder
 				}
 			}
 
 			for floor := 0; floor < queueMatrix.Floor; floor ++ {
 				if (queueMatrix.OutsideOrders[floor][src.BUTTON_DOWN] == ORDER || queueMatrix.InsideOrders[floor] == ORDER) {
-					nextFloor = floor
-					return nextFloor
+					currentOrder = src.ButtonOrder{floor, src.BUTTON_DOWN}
+					return currentOrder
 				}
 			}
 		case src.DIR_DOWN:
 			
 			for floor := queueMatrix.Floor; floor > 0; floor -- {
 				if (queueMatrix.OutsideOrders[floor][src.BUTTON_DOWN] == ORDER || queueMatrix.InsideOrders[floor] == ORDER) {
-					nextFloor = floor
-					return nextFloor
+					currentOrder = src.ButtonOrder{floor, src.BUTTON_DOWN}
+					return currentOrder
 				}
 			}
 
 			for floor := 0; floor < src.N_FLOORS; floor ++ {
 				if (queueMatrix.OutsideOrders[floor][src.BUTTON_UP] == ORDER || queueMatrix.InsideOrders[floor] == ORDER) {
-					nextFloor = floor
-					return nextFloor
+					currentOrder = src.ButtonOrder{floor, src.BUTTON_UP}
+					return currentOrder
 				}
 			}
 
 			for floor := src.N_FLOORS - 1; floor > queueMatrix.Floor; floor -- {
 				if (queueMatrix.OutsideOrders[floor][src.BUTTON_DOWN] == ORDER || queueMatrix.InsideOrders[floor] == ORDER) {
-					nextFloor = floor
-					return nextFloor
+					currentOrder = src.ButtonOrder{floor, src.BUTTON_DOWN}
+					return currentOrder
 				}
 			}
 
 		default:
-			return queueMatrix.Floor
+			return currentOrder
 	}
-	return nextFloor
+	return currentOrder
 }
 
 
 func RememberDeletedOrders(queueData src.ElevatorData, memoOfDeletedOrders src.ElevatorData, storedDeletedOrder int) src.ElevatorData {
-	var memoOfDeletedOrders src.ElevatorData
-
 	for floor := 0; floor < src.N_FLOORS; floor ++ {
 		for direction := 0; direction < 2; direction ++ {
 			if queueData.OutsideOrders[floor][direction] == DELETE_ORDER {
@@ -314,7 +312,8 @@ func addDeletedOrders(queueData src.ElevatorData, memoOfDeletedOrders src.Elevat
 	return queueData
 }
 
-func InitQueue(chNewFloor chan int, chNewOrder chan src.ButtonOrder, chNewDirection chan int, chOrderIsFinished chan src.ButtonOrder, chNewOrdersFromQueue chan src.ElevatorData, chNewNextFloorFromQueue chan int) {
+
+func InitQueue(chNewFloor chan int, chNewOrder chan src.ButtonOrder, chNewDirection chan int, chOrderIsFinished chan bool, chNewOrdersFromQueue chan src.ElevatorData, chNewNextFloorFromQueue chan int) {
 	go network.NetworkHandler()
 
 	IPaddr := network.GetIPAddress()
@@ -327,7 +326,28 @@ func InitQueue(chNewFloor chan int, chNewOrder chan src.ButtonOrder, chNewDirect
 	go QueueHandler(chNewFloor, chNewOrder, chNewDirection, chOrderIsFinished, chNewOrdersFromQueue, chNewNextFloorFromQueue, storedDeletedOrder, memoOfDeletedOrders)
 }
 
-func QueueHandler(chNewFloor chan int, chNewOrder chan src.ButtonOrder, chNewDirection chan int, chOrderIsFinished chan src.ButtonOrder, chNewOrdersFromQueue chan src.ElevatorData, chNewNextFloorFromQueue chan int, storedDeletedOrder int, memoOfDeletedOrders src.ElevatorData) {
+
+func addOrder(order src.ButtonOrder) {
+	switch(order.ButtonType) {
+		case src.BUTTON_INSIDE:
+			knownOrders.InsideOrders[order.Floor] = ORDER
+		default:
+			knownOrders.OutsideOrders[order.Floor][order.ButtonType] = ORDER
+
+
+	}
+}
+
+
+func deleteOrder(order src.ButtonOrder) {
+	knownOrders.InsideOrders[order.Floor] = DELETE_ORDER
+	knownOrders.OutsideOrders[order.Floor][order.ButtonType] = DELETE_ORDER
+	// We assume everyone goes out of the elevator
+}
+
+
+func QueueHandler(chNewFloor chan int, chNewOrder chan src.ButtonOrder, chNewDirection chan int, chOrderIsFinished chan bool, chNewOrdersFromQueue chan src.ElevatorData, chNewNextFloorFromQueue chan int, storedDeletedOrder int, memoOfDeletedOrders src.ElevatorData) {
+	
 	for {
 		select {
 			case <- network.ChReadyToMerge:
@@ -358,10 +378,10 @@ func QueueHandler(chNewFloor chan int, chNewOrder chan src.ButtonOrder, chNewDir
 				knownOrders.OutsideOrders = mergedQueue.OutsideOrders
 
 				assignedOrder := assignOrders(allElevatorData, mergedQueue)
-				nextFloor := calcNextFloor(assignedOrder)
+				currentOrder = calcNextOrderAndFloor(assignedOrder)
 				listOfIncomingData = nil
 
-				chNewNextFloorFromQueue <- nextFloor
+				chNewNextFloorFromQueue <- currentOrder.Floor
 				chNewOrdersFromQueue <- knownOrders
 
 				if storedDeletedOrder > 0 { knownOrders = addDeletedOrders(knownOrders, memoOfDeletedOrders)}
@@ -369,7 +389,7 @@ func QueueHandler(chNewFloor chan int, chNewOrder chan src.ButtonOrder, chNewDir
 
 				// FOR TESTING: ------------------
 				println("Assigned Queue: ")
-				println("next floor:", nextFloor)
+				println("next floor:", currentOrder.Floor)
 				tools.PrintQueue(assignedOrder)
 				// -------------------------------
 
@@ -380,22 +400,27 @@ func QueueHandler(chNewFloor chan int, chNewOrder chan src.ButtonOrder, chNewDir
 				knownOrders.Floor = newFloor
 
 			case newOrder := <- chNewOrder:
-				//update elevatorData.queueMatrix
-				print(newOrder.Floor) // TEMPORARY
-			case finishedOrder := <- chOrderIsFinished:
-				//update elevatorData.queueMatrix with a special char
-				print(finishedOrder.Floor) // TEMPORARY
+				addOrder(newOrder)
+
+			case <- chOrderIsFinished:
+				deleteOrder(currentOrder)
+
 			case newDirection := <- chNewDirection:
 				knownOrders.Direction = newDirection
-
-
 		}
 	}
 }
+
 
 // TODO:
 
 // * implement functionality for DIR_STOP in calcTotalCost					| OK
 // * pass our queue into merge orders when ReadyToMerge 					| OK
 // * idea: make cost-function to weight no. of stops only (less code)		|
-// * implement addOrder() and deleteOrder()									|
+// * implement addOrder() and deleteOrder()									| OK
+// * remove knownOrders and incomingList as global var						|
+// * set nextFloor = nil in calcNextOrderAndFloor
+
+// BUGS:
+
+// * potensielt: kan to heiser gå til samme etasje, en med inn og en med opp? I så fall blir det krøll.
