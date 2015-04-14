@@ -12,7 +12,7 @@ const PORT = "20019"
 var IP string
 var connectionStatus = make(map[string]bool) //map[IP]status
 
-var timeoutLimit time.Duration = 3*time.Second
+var timeoutLimit time.Duration = 2*time.Second
 var sendPingInterval time.Duration = 400*time.Millisecond
 
 type networkMessage struct {
@@ -87,7 +87,7 @@ func createBroadcastConn() *net.UDPConn{
 
 func GetIPAddress() string {
 
-	return "192.168.0.102" // FOR WINDOWS AND TESTING ONLY!
+	return "78.91.21.43" // FOR WINDOWS AND TESTING ONLY!
 
 	addrs, err := net.InterfaceAddrs()
     if err != nil {

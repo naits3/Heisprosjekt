@@ -50,25 +50,23 @@ func clearOutsideOrders(queueList []src.ElevatorData) {
 // TESTED:
 func mergeOrders(queueList []src.ElevatorData) src.ElevatorData {
 	var mergedData src.ElevatorData
-	var mergedQueue [src.N_FLOORS][2]int	
 
 	for floor := 0; floor < src.N_FLOORS; floor ++ {
-		directionLoop:	
 		for direction := 0; direction < 2; direction ++ {
-			
+
+			nextDirection:
 			for eachQueue := 0; eachQueue < len(queueList); eachQueue ++ {
 				switch queueList[eachQueue].OutsideOrders[floor][direction] {
 					case src.ORDER:
-						mergedQueue[floor][direction] = src.ORDER
+						mergedData.OutsideOrders[floor][direction] = src.ORDER
 					case src.DELETE_ORDER:
-						mergedQueue[floor][direction] = src.EMPTY
-						break directionLoop
+						mergedData.OutsideOrders[floor][direction] = src.EMPTY
+						break nextDirection
 				}
 			}
 		}
 	}
 
-	mergedData.OutsideOrders = mergedQueue
 	return mergedData
 }
 
@@ -277,7 +275,10 @@ func calcNextOrderAndFloor(queueMatrix src.ElevatorData) src.ButtonOrder {
 }
 
 
-func RememberDeletedOrders(queueData src.ElevatorData, memoOfDeletedOrders src.ElevatorData, storedDeletedOrder int) src.ElevatorData {
+func RememberDeletedOrders(queueData src.ElevatorData) (src.ElevatorData, int) {
+	var memoOfDeletedOrders src.ElevatorData
+	storedDeletedOrder := 0
+	
 	for floor := 0; floor < src.N_FLOORS; floor ++ {
 		for direction := 0; direction < 2; direction ++ {
 			if queueData.OutsideOrders[floor][direction] == DELETE_ORDER {
@@ -292,7 +293,7 @@ func RememberDeletedOrders(queueData src.ElevatorData, memoOfDeletedOrders src.E
 		}
 	}
 
-	return memoOfDeletedOrders
+	return memoOfDeletedOrders, storedDeletedOrder
 }
 
 
@@ -340,9 +341,8 @@ func addOrder(order src.ButtonOrder) {
 
 
 func deleteOrder(order src.ButtonOrder) {
-	knownOrders.InsideOrders[order.Floor] = DELETE_ORDER
+	knownOrders.InsideOrders[order.Floor] = EMPTY
 	knownOrders.OutsideOrders[order.Floor][order.ButtonType] = DELETE_ORDER
-	// We assume everyone goes out of the elevator
 }
 
 
@@ -361,7 +361,7 @@ func QueueHandler(chNewFloor chan int, chNewOrder chan src.ButtonOrder, chNewDir
 
 				// THis fixes the bug with deleted order may not be registered correctly.
 				if storedDeletedOrder == 0 { 
-					memoOfDeletedOrders = RememberDeletedOrders(knownOrders, memoOfDeletedOrders, storedDeletedOrder)
+					memoOfDeletedOrders, storedDeletedOrder = RememberDeletedOrders(knownOrders)
 				} else if storedDeletedOrder == 1 { 
 					storedDeletedOrder ++ 
 				} else if storedDeletedOrder == 2 {
@@ -390,6 +390,7 @@ func QueueHandler(chNewFloor chan int, chNewOrder chan src.ButtonOrder, chNewDir
 				// FOR TESTING: ------------------
 				println("Assigned Queue: ")
 				println("next floor:", currentOrder.Floor)
+				println("order dir:", currentOrder.ButtonType)
 				tools.PrintQueue(assignedOrder)
 				// -------------------------------
 
@@ -419,7 +420,7 @@ func QueueHandler(chNewFloor chan int, chNewOrder chan src.ButtonOrder, chNewDir
 // * idea: make cost-function to weight no. of stops only (less code)		|
 // * implement addOrder() and deleteOrder()									| OK
 // * remove knownOrders and incomingList as global var						|
-// * set nextFloor = nil in calcNextOrderAndFloor
+// * make addDeletedOrders be able to remember multiple deletions			|
 
 // BUGS:
 

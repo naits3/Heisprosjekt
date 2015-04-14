@@ -5,31 +5,30 @@ import (
 	"time"
 	"Heisprosjekt/src"
 	"Heisprosjekt/tools"
-	"Heisprosjekt/network"
+	//"Heisprosjekt/network"
 )
-
 
 
 func TestMergeOrders(t *testing.T) {
 	var testData1 src.ElevatorData
-	var testData2 src.ElevatorData
-	var testData3 src.ElevatorData
+	// var testData2 src.ElevatorData
+	// var testData3 src.ElevatorData
 	//var mergedData elevatorData
 	
-	testData1.OutsideOrders[0][0] = ORDER
-	testData2.OutsideOrders[2][1] = DELETE_ORDER
-	testData3.OutsideOrders[2][1] = DELETE_ORDER
-	testData3.InsideOrders[1] = ORDER
+	testData1.OutsideOrders[0][1] = ORDER
+	testData1.OutsideOrders[2][0] = DELETE_ORDER
+	testData1.OutsideOrders[2][1] = ORDER
+	testData1.InsideOrders[2] = DELETE_ORDER
 
-	queueList := []src.ElevatorData{testData1, testData2, testData3}
+	queueList := []src.ElevatorData{testData1}
 	
 	// ------- ONLY FOR PRINTING: -------------//
 	println("Elevator 1:")
 	tools.PrintQueue(testData1)
-	println("Elevator 2:")
-	tools.PrintQueue(testData2)
-	println("Elevator 3:")
-	tools.PrintQueue(testData3)
+	// println("Elevator 2:")
+	// tools.PrintQueue(testData2)
+	// println("Elevator 3:")
+	// tools.PrintQueue(testData3)
 	println(" ---------------- ")
 	// ---------------------------------------//
 
@@ -131,54 +130,64 @@ func TestAssignOrders(t *testing.T) {
 	println("Before assignment: ")
 	tools.PrintQueue(mergedQueue)
 
-	queueArray2 := []src.ElevatorData{elevatorThree, elevatorOne, elevatorTwo}
-	queueArray1 := []src.ElevatorData{elevatorTwo, elevatorThree, elevatorOne}
-	queueArray3 := []src.ElevatorData{elevatorTwo, elevatorOne, elevatorThree}
+	// queueArray2 := []src.ElevatorData{elevatorThree, elevatorOne, elevatorTwo}
+	// queueArray1 := []src.ElevatorData{elevatorTwo, elevatorThree, elevatorOne}
+	// queueArray3 := []src.ElevatorData{elevatorTwo, elevatorOne, elevatorThree}
 
 
-	assignedOrder1 := assignOrders(queueArray1, mergedQueue)
-	assignedOrder2 := assignOrders(queueArray2, mergedQueue)
-	assignedOrder3 := assignOrders(queueArray3, mergedQueue)
+	// assignedOrder1 := assignOrders(queueArray1, mergedQueue)
+	// assignedOrder2 := assignOrders(queueArray2, mergedQueue)
+	// assignedOrder3 := assignOrders(queueArray3, mergedQueue)
 
-	println("After assignment: ")
-
-	println("nextFloor =",calcNextFloor(assignedOrder1))
-	println("cost: ", calcTotalCost(&assignedOrder1))
-	tools.PrintQueue(assignedOrder1)
-	println("nextFloor =",calcNextFloor(assignedOrder2))
-	tools.PrintQueue(assignedOrder2)
-	println("nextFloor =",calcNextFloor(assignedOrder3))
-	tools.PrintQueue(assignedOrder3)
-}
-
-
-func TestRememberDO(t *testing.T) {
-
-	done := make(chan bool)
-	go network.NetworkHandler()
-	
-	knownOrders.OutsideOrders[0][1] = 1
-	knownOrders.OutsideOrders[2][1] = 1
-	knownOrders.OutsideOrders[2][0] = 1
-
-	go QueueHandler()
-
-	time.Sleep(10*time.Second)
-
-	knownOrders.OutsideOrders[2][1] = DELETE_ORDER
-
-	<- done
+	// println("After assignment: ")
 }
 
 
 func TestQueueHandler(t *testing.T) {
-	go network.NetworkHandler()
+
+	var done					= make(chan bool)
+	var chNewFloor				= make(chan int)
+	var chNewOrder 				= make(chan src.ButtonOrder)
+	var chNewDirection			= make(chan int)
+	var chOrderIsFinished 		= make(chan bool)
+	var chNewOrdersFromQueue 	= make(chan src.ElevatorData)
+	var chNewNextFloorFromQueue = make(chan int)
 	
-	knownOrders.OutsideOrders[0][1] = 1
+	knownOrders.OutsideOrders[0][0] = 1
 	knownOrders.OutsideOrders[2][1] = 1
 	knownOrders.OutsideOrders[2][0] = 1
+	knownOrders.InsideOrders[0] = 1
 
-	QueueHandler()
+
+	InitQueue(chNewFloor, chNewOrder, chNewDirection, chOrderIsFinished, chNewOrdersFromQueue, chNewNextFloorFromQueue)
+
+
+	go func() {
+		for {
+			select {
+				case <- chNewOrdersFromQueue:
+					continue
+				case <- chNewNextFloorFromQueue:
+					continue
+				default:
+					time.Sleep(100*time.Millisecond)
+
+			}
+		}
+	}()
+
+	time.Sleep(5*time.Second)
+
+	// chNewOrder <- src.ButtonOrder{1, src.BUTTON_UP}
+	// knownOrders.OutsideOrders[2][0] = DELETE_ORDER
+
+	// chNewDirection <- src.DIR_STOP
+
+	// time.Sleep(10*time.Second)
+
+	chOrderIsFinished <- true
+
+	<- done
 }
 
 
