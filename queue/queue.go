@@ -16,7 +16,7 @@ const (
 
 var knownOrders    		src.ElevatorData
 var listOfIncomingData  []src.ElevatorData
-var storedDeletedOrder	bool
+var storedDeletedOrder	int
 
 
 func findMinimumCost(costArray []int, queueList []src.ElevatorData) int {
@@ -285,13 +285,13 @@ func RememberDeletedOrders(queueData src.ElevatorData) src.ElevatorData {
 		for direction := 0; direction < 2; direction ++ {
 			if queueData.OutsideOrders[floor][direction] == DELETE_ORDER {
 				memoOfDeletedOrders.OutsideOrders[floor][direction] = DELETE_ORDER
-				storedDeletedOrder = true
+				storedDeletedOrder = 1
 			}
 		}
 
 		if queueData.InsideOrders[floor] == DELETE_ORDER {
 			memoOfDeletedOrders.InsideOrders[floor] = DELETE_ORDER
-			storedDeletedOrder = true
+			storedDeletedOrder = 1
 		}
 	}
 
@@ -327,7 +327,7 @@ func QueueHandler() {
 	IPaddrArray := strings.Split(IPaddr, ".")
 	knownOrders.ID, _ = strconv.Atoi(IPaddrArray[3])
 
-	storedDeletedOrder = false
+	storedDeletedOrder = 0
 	var memoOfDeletedOrders src.ElevatorData
 
 	for {
@@ -342,8 +342,13 @@ func QueueHandler() {
 				// ------------
 
 				// THis fixes the bug with deleted order may not be registered correctly.
-				if !storedDeletedOrder { memoOfDeletedOrders = RememberDeletedOrders(knownOrders)
-				} else { storedDeletedOrder = false}
+				if storedDeletedOrder == 0 { 
+					memoOfDeletedOrders = RememberDeletedOrders(knownOrders)
+				} else if storedDeletedOrder == 1 { 
+					storedDeletedOrder ++ 
+				} else if storedDeletedOrder == 2 {
+					storedDeletedOrder = 0
+				} else {}
 				// --------------------
 
 				network.ChQueueReadyToBeSent <- knownOrders
@@ -358,7 +363,7 @@ func QueueHandler() {
 				nextFloor := calcNextFloor(assignedOrder)
 				listOfIncomingData = nil
 				// send knownOrders and nextFloor to controller
-				if storedDeletedOrder { knownOrders = addDeletedOrders(knownOrders, memoOfDeletedOrders)}
+				if storedDeletedOrder > 0 { knownOrders = addDeletedOrders(knownOrders, memoOfDeletedOrders)}
 				
 
 				// FOR TESTING: ------------------
