@@ -2,9 +2,9 @@ package controller
 
 import (
 	"Heisprosjekt/io"
-	"Heisprosjekt/queue"
+	//"Heisprosjekt/queue"
 	"Heisprosjekt/src"
-	"Heisprosjekt/tools"
+	//"Heisprosjekt/tools"
 	"time"
 )
 
@@ -36,7 +36,7 @@ func InitController() {
 	io.InitIo(chCommandFromControl, chButtonOrderToControl, chFloorSensorToControl)
 	goDownUntilReachFloor()	
 	//queue.InitQueue(channels here...) // Let Queue init network
-	go controllerHandler(direction)
+	go controllerHandler()
 }
 
 func controllerHandler(){
@@ -50,6 +50,7 @@ func controllerHandler(){
 					case IDLE:
 						
 						direction := findElevatorDirection()
+						println(direction)
 						chCommandFromControl <- src.Command{src.SET_MOTOR_DIR,direction,-1,src.BUTTON_NONE}
 
 						if(direction == 0){
@@ -68,8 +69,8 @@ func controllerHandler(){
 
 					case MOVING:
 						direction := findElevatorDirection()
+						println(direction)
 						chCommandFromControl <- src.Command{src.SET_MOTOR_DIR,direction,-1,src.BUTTON_NONE}
-
 						if(direction == 0){
 							state = DOOR_OPEN
 							openDoor()
@@ -86,12 +87,12 @@ func controllerHandler(){
 				chNewFloor <- currentFloor
 
 			case queueOrders := <-chNewOrdersFromQueue:
+				println("1")
 				setLights(queueOrders)
 		
 
 			case nextFloor = <-  chNewNextFloorFromQueue:
 					orderFinished = false
-				}
 				
 		}				
 	}

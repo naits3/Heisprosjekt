@@ -4,7 +4,7 @@ import (
 	"testing"
 	"Heisprosjekt/src"
 	"time"
-	//"Heisprosjekt/tools"
+	"Heisprosjekt/tools"
 )
 
 func TestInitController(t *testing.T){
@@ -49,7 +49,7 @@ func TestSetLights(t *testing.T){
 
 
 	time.Sleep(1*time.Second)
-	// tools.PrintQueue(testData1)
+	 tools.PrintQueue(testData1)
 	chNewOrdersFromQueue <- testData1
 
 	time.Sleep(1*time.Second)
@@ -69,7 +69,7 @@ func TestReciveOrder(t *testing.T){
 
 func TestNextFloor(t *testing.T) {
 	InitController()
-	println("waiting for lunch")
+	println("waiting for launch")
 	println()
 	time.Sleep(time.Second)
 
