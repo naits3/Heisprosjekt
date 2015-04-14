@@ -81,3 +81,12 @@ func ListenForData() {
 		PrintQueue(network.Unpack(buffer[:lengthOfMessage]))
 	}
 }
+
+
+func PrintQueueHandler(mergedQ src.ElevatorData, assignedQ src.ElevatorData) {
+	println("The merged Queue: ")
+	PrintQueue(mergedQ)
+
+	println("Assigned Queue: ")
+	PrintQueue(assignedQ)
+}
