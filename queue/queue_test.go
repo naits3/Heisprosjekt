@@ -190,4 +190,26 @@ func TestQueueHandler(t *testing.T) {
 	<- done
 }
 
+func TestDebug(t *testing.T) {
+	knownOrders.OutsideOrders[2][1] = 1
+	knownOrders.InsideOrders[0] = 1
+	knownOrders.ID = 3
+
+	var otherData src.ElevatorData
+
+	otherData.OutsideOrders[2][1] = DELETE_ORDER
+	otherData.OutsideOrders[1][1] = ORDER
+
+	allElevatorData := []src.ElevatorData{otherData, knownOrders}
+
+	println("Received list before merge: ")
+	tools.PrintQueueArray(allElevatorData) //FOR TESTING
+	mergedQueue := mergeOrders(allElevatorData)
+
+	knownOrders.OutsideOrders = mergedQueue.OutsideOrders
+
+	println("Known Orders after merge: ")
+	tools.PrintQueue(knownOrders) //FOR TESTING
+}
+
 
