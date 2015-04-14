@@ -13,7 +13,7 @@ var IP string
 var connectionStatus = make(map[string]bool) //map[IP]status
 
 var timeoutLimit time.Duration = 2*time.Second
-var sendPingInterval time.Duration = 400*time.Millisecond
+var sendPingInterval time.Duration = 200*time.Millisecond
 
 type networkMessage struct {
 	address string
@@ -24,6 +24,7 @@ type networkMessage struct {
 var ChDataToQueue = make(chan src.ElevatorData)
 var ChReadyToMerge = make(chan bool)
 var ChQueueReadyToBeSent = make(chan src.ElevatorData)
+var ChReceiptFromQueue = make(chan bool)
 
 //TESTED:
 func sendPing(broadcastConn *net.UDPConn){
@@ -132,7 +133,6 @@ func NetworkHandler() {
 	for { 
 		select {
 			case data := <- chReceivedData:
-				
 				alreadyReceived := false
 				for storedAddress, status := range connectionStatus {
 					if data.address == storedAddress && status == true {
@@ -144,9 +144,9 @@ func NetworkHandler() {
 					break
 				}
 
-				//println("Received from: ", data.address)
 				connectionStatus[data.address] = true
 				ChDataToQueue <- Unpack(data.elevatorData)
+				<- ChReceiptFromQueue
 
 			case <- chTimeout:
 				//println("Elevators: ") // FOR TESTING!
@@ -155,13 +155,17 @@ func NetworkHandler() {
 					switch status {
 						case true:
 							connectionStatus[address] = false
-							//println(address) // FOR TESTING!
+							 // FOR TESTING!
 						case false:
+							println("Is probably dead!")
 							delete(connectionStatus, address)
 					}
 				}
 			//	println(" ") // FOR TESTING
 				ChReadyToMerge <- true
+
+			default:
+				time.Sleep(100*time.Millisecond)
 		}
 	}
 }

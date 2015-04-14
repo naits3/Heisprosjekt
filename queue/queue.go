@@ -385,7 +385,6 @@ func QueueHandler(chNewFloor chan int, chNewOrder chan src.ButtonOrder, chNewDir
 				chNewOrdersFromQueue <- knownOrders
 				if storedDeletedOrder > 0 { knownOrders = addDeletedOrders(knownOrders, memoOfDeletedOrders)}
 				
-				println(" about to send data to network ..")
 				network.ChQueueReadyToBeSent <- knownOrders
 				
 				println("Known Orders:")
@@ -394,6 +393,7 @@ func QueueHandler(chNewFloor chan int, chNewOrder chan src.ButtonOrder, chNewDir
 
 			case data := <- network.ChDataToQueue:
 				listOfIncomingData = append(listOfIncomingData, data)
+				network.ChReceiptFromQueue <- true
 
 			case newFloor := <- chNewFloor:
 				knownOrders.Floor = newFloor

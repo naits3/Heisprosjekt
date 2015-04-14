@@ -176,7 +176,7 @@ func TestQueueHandler(t *testing.T) {
 		}
 	}()
 
-	time.Sleep(5*time.Second)
+	//time.Sleep(5*time.Second)
 
 	// chNewOrder <- src.ButtonOrder{1, src.BUTTON_UP}
 	// knownOrders.OutsideOrders[2][0] = DELETE_ORDER
@@ -185,7 +185,7 @@ func TestQueueHandler(t *testing.T) {
 
 	// time.Sleep(10*time.Second)
 
-	chOrderIsFinished <- true
+	// chOrderIsFinished <- true
 
 	<- done
 }
