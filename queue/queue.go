@@ -367,6 +367,8 @@ func QueueHandler(chNewFloor chan int, chNewOrder chan src.ButtonOrder, chNewDir
 				} else {}
 				// --------------------
 
+				network.ChQueueReadyToBeSent <- knownOrders
+
 				mergedQueue := mergeOrders(allElevatorData)
 				
 				//tools.PrintQueue(knownOrders) //FOR TESTING
@@ -383,12 +385,12 @@ func QueueHandler(chNewFloor chan int, chNewOrder chan src.ButtonOrder, chNewDir
 				chNewOrdersFromQueue <- knownOrders
 				if storedDeletedOrder > 0 { knownOrders = addDeletedOrders(knownOrders, memoOfDeletedOrders)}
 				
+				println(" about to send data to network ..")
 				network.ChQueueReadyToBeSent <- knownOrders
-
-				//tools.PrintQueueHandler(mergedQueue, assignedOrder)
-				println("Assigned Orders:")
-				tools.PrintQueue(assignedOrder)
-				println("Next Floor:", currentOrder.Floor)
+				
+				println("Known Orders:")
+				tools.PrintQueue(knownOrders)
+						
 
 			case data := <- network.ChDataToQueue:
 				listOfIncomingData = append(listOfIncomingData, data)
@@ -401,8 +403,7 @@ func QueueHandler(chNewFloor chan int, chNewOrder chan src.ButtonOrder, chNewDir
 
 			case <- chOrderIsFinished:
 				deleteOrder(currentOrder)
-				println("Order is deleted!")
-
+				
 			case newDirection := <- chNewDirection:
 				knownOrders.Direction = newDirection
 		}

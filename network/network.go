@@ -12,8 +12,8 @@ const PORT = "20019"
 var IP string
 var connectionStatus = make(map[string]bool) //map[IP]status
 
-var timeoutLimit time.Duration = 1*time.Second
-var sendPingInterval time.Duration = 200*time.Millisecond
+var timeoutLimit time.Duration = 2*time.Second
+var sendPingInterval time.Duration = 400*time.Millisecond
 
 type networkMessage struct {
 	address string
@@ -26,12 +26,12 @@ var ChReadyToMerge = make(chan bool)
 var ChQueueReadyToBeSent = make(chan src.ElevatorData)
 
 //TESTED:
-func sendPing(broadcastConn *net.UDPConn, chOutgoingData chan src.ElevatorData){
-	dataToSend := <- chOutgoingData		
+func sendPing(broadcastConn *net.UDPConn){
+	dataToSend := <- ChQueueReadyToBeSent		
 	
 	for {
 		select {
-			case outgoingData := <- chOutgoingData:
+			case outgoingData := <- ChQueueReadyToBeSent:
 				dataToSend = outgoingData
 
 			default:
@@ -87,7 +87,7 @@ func createBroadcastConn() *net.UDPConn{
 
 func GetIPAddress() string {
 
-	//return "78.91.21.43" // FOR WINDOWS AND TESTING ONLY!
+	return "192.168.0.102" // FOR WINDOWS AND TESTING ONLY!
 
 	addrs, err := net.InterfaceAddrs()
     if err != nil {
@@ -120,13 +120,13 @@ func timer(timeout chan bool) {
 func NetworkHandler() {
 	chTimeout := make(chan bool)
 	chReceivedData := make(chan networkMessage)
-	chSendData := make(chan src.ElevatorData)
+	//chSendData := make(chan src.ElevatorData)
 
 	IP = GetIPAddress()	
 	broadcastConn := createBroadcastConn()
 
 	go listenPing(chReceivedData)
-	go sendPing(broadcastConn, chSendData)
+	go sendPing(broadcastConn)
 	go timer(chTimeout)
 
 	for { 
@@ -147,9 +147,6 @@ func NetworkHandler() {
 				//println("Received from: ", data.address)
 				connectionStatus[data.address] = true
 				ChDataToQueue <- Unpack(data.elevatorData)
-
-			case outGoingData := <- ChQueueReadyToBeSent:
-				chSendData <- outGoingData
 
 			case <- chTimeout:
 				//println("Elevators: ") // FOR TESTING!
