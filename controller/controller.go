@@ -2,7 +2,7 @@ package controller
 
 import (
 	"Heisprosjekt/io"
-	//"Heisprosjekt/queue"
+	"Heisprosjekt/queue"
 	"Heisprosjekt/src"
 	"Heisprosjekt/tools"
 	"time"
@@ -37,7 +37,7 @@ func InitController() {
 	goDownUntilReachFloor()	
 	state = IDLE
 
-	// InitQueue(channels here...) // Let Queue init network
+	queue.InitQueue(channels here...) // Let Queue init network
 	
 	go controllerHandler()
 }

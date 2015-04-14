@@ -16,7 +16,6 @@ const (
 
 var knownOrders    		src.ElevatorData
 var listOfIncomingData  []src.ElevatorData
-var storedDeletedOrder	int
 
 
 func findMinimumCost(costArray []int, queueList []src.ElevatorData) int {
@@ -278,7 +277,7 @@ func calcNextFloor(queueMatrix src.ElevatorData) int {
 }
 
 
-func RememberDeletedOrders(queueData src.ElevatorData) src.ElevatorData {
+func RememberDeletedOrders(queueData src.ElevatorData, memoOfDeletedOrders src.ElevatorData, storedDeletedOrder int) src.ElevatorData {
 	var memoOfDeletedOrders src.ElevatorData
 
 	for floor := 0; floor < src.N_FLOORS; floor ++ {
@@ -315,21 +314,20 @@ func addDeletedOrders(queueData src.ElevatorData, memoOfDeletedOrders src.Elevat
 	return queueData
 }
 
-
-func QueueHandler() {
-	chNewFloor		:= make(chan int)
-	chNewOrder 		:= make(chan src.ButtonOrder)
-	chNewDirection	:= make(chan int)
-	chOrderIsFinished 	:= make(chan src.ButtonOrder)
-	// Delete the above, and create them in ctonrller instead
+func InitQueue(chNewFloor chan int, chNewOrder chan src.ButtonOrder, chNewDirection chan int, chOrderIsFinished chan src.ButtonOrder, chNewOrdersFromQueue chan src.ElevatorData, chNewNextFloorFromQueue chan int) {
+	go network.NetworkHandler()
 
 	IPaddr := network.GetIPAddress()
 	IPaddrArray := strings.Split(IPaddr, ".")
 	knownOrders.ID, _ = strconv.Atoi(IPaddrArray[3])
 
-	storedDeletedOrder = 0
+	storedDeletedOrder := 0
 	var memoOfDeletedOrders src.ElevatorData
 
+	go QueueHandler(chNewFloor, chNewOrder, chNewDirection, chOrderIsFinished, chNewOrdersFromQueue, chNewNextFloorFromQueue, storedDeletedOrder, memoOfDeletedOrders)
+}
+
+func QueueHandler(chNewFloor chan int, chNewOrder chan src.ButtonOrder, chNewDirection chan int, chOrderIsFinished chan src.ButtonOrder, chNewOrdersFromQueue chan src.ElevatorData, chNewNextFloorFromQueue chan int, storedDeletedOrder int, memoOfDeletedOrders src.ElevatorData) {
 	for {
 		select {
 			case <- network.ChReadyToMerge:
@@ -343,7 +341,7 @@ func QueueHandler() {
 
 				// THis fixes the bug with deleted order may not be registered correctly.
 				if storedDeletedOrder == 0 { 
-					memoOfDeletedOrders = RememberDeletedOrders(knownOrders)
+					memoOfDeletedOrders = RememberDeletedOrders(knownOrders, memoOfDeletedOrders, storedDeletedOrder)
 				} else if storedDeletedOrder == 1 { 
 					storedDeletedOrder ++ 
 				} else if storedDeletedOrder == 2 {
@@ -362,7 +360,10 @@ func QueueHandler() {
 				assignedOrder := assignOrders(allElevatorData, mergedQueue)
 				nextFloor := calcNextFloor(assignedOrder)
 				listOfIncomingData = nil
-				// send knownOrders and nextFloor to controller
+
+				chNewNextFloorFromQueue <- nextFloor
+				chNewOrdersFromQueue <- knownOrders
+
 				if storedDeletedOrder > 0 { knownOrders = addDeletedOrders(knownOrders, memoOfDeletedOrders)}
 				
 
@@ -385,8 +386,8 @@ func QueueHandler() {
 				//update elevatorData.queueMatrix with a special char
 				print(finishedOrder.Floor) // TEMPORARY
 			case newDirection := <- chNewDirection:
-
 				knownOrders.Direction = newDirection
+
 
 		}
 	}
