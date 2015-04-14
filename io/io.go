@@ -8,7 +8,6 @@ package io
 */
 import "C"
 import "Heisprosjekt/src"
-import "runtime"
 import "fmt"
 import "time"
 
@@ -17,8 +16,6 @@ var chButtonOrder = make(chan src.ButtonOrder)
 var chFloorSensor = make(chan int)
 
 func InitIo(chCommandFromControl chan src.Command, chButtonOrderToControl chan src.ButtonOrder, chFloorSensorToControl chan int){
-	
-	runtime.GOMAXPROCS(1)
 
 	if err:=C.elev_init(); err<0{
 		fmt.Println("Could not initialize hardware")
@@ -28,6 +25,7 @@ func InitIo(chCommandFromControl chan src.Command, chButtonOrderToControl chan s
 	go pollFloorSensors()
 	go pollButtonOrders()
 }
+
 func ioHandler(chCommandFromControl chan src.Command, chButtonOrderToControl chan src.ButtonOrder,chFloorSensorToControl chan int){
 	for{
 		select{
@@ -62,31 +60,26 @@ func pollButtonOrders(){
 			if(int(C.elev_get_button_signal(C.elev_button_type_t(src.BUTTON_INSIDE), C.int(floor)))==1){
 				chButtonOrder <- src.ButtonOrder{floor, src.BUTTON_INSIDE}
 			}
-			time.Sleep(10*time.Millisecond)
 		}
+		time.Sleep(40*time.Millisecond)
 	}
 }
 
 func pollFloorSensors(){
 	for{
 		if floor := int(C.elev_get_floor_sensor_signal()); floor != -1{
-			chFloorSensor <- floor
-			time.Sleep(100*time.Millisecond)
+			chFloorSensor <- floor	
 		}
-		
-		
+		time.Sleep(100*time.Millisecond)
 	}
 }
 
 func doCommand(command src.Command){
 	switch commandType := command.CommandType; commandType{
 		case src.SET_MOTOR_DIR:
-			// println("Setting motordir")
-			//println(command.SetValue)
 			C.elev_set_motor_direction(C.elev_motor_direction_t(command.SetValue))
 		
 		case src.SET_BUTTON_LAMP:
-			// println("Setting Button Lamp")
 			switch buttonType := command.ButtonType;buttonType{
 				case src.BUTTON_UP:
 					if(command.Floor < src.N_FLOORS-1) {
@@ -105,12 +98,9 @@ func doCommand(command src.Command){
 			
 
 		case src.SET_FLOOR_INDICATOR_LAMP:
-			// println("Setting floor indicator lamp")
 			C.elev_set_floor_indicator(C.int(command.Floor))
-			// println("Done floor indicator lamp")
 		
 		case src.SET_DOOR_OPEN_LAMP:
-			// println("setting lamp")
 			C.elev_set_door_open_lamp(C.int(command.SetValue))
 	}
 }
