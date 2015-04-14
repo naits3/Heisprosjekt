@@ -353,9 +353,9 @@ func QueueHandler(chNewFloor chan int, chNewOrder chan src.ButtonOrder, chNewDir
 			case <- network.ChReadyToMerge:
 				allElevatorData := append(listOfIncomingData, knownOrders)
 				
-				//println("------------------")
-				// println("Registered Queues:")
-				// tools.PrintQueueArray(allElevatorData)
+				println("------------------")
+				println("Registered Queues:")
+				tools.PrintQueueArray(allElevatorData)
 
 				// THis fixes the bug with deleted order may not be registered correctly.
 				if storedDeletedOrder == 0 { 
@@ -367,8 +367,15 @@ func QueueHandler(chNewFloor chan int, chNewOrder chan src.ButtonOrder, chNewDir
 				} else {}
 				// --------------------
 
+				
+				
+
 				network.ChQueueReadyToBeSent <- knownOrders
 				mergedQueue := mergeOrders(allElevatorData)
+
+				println("Merged queue:")
+				tools.PrintQueue(mergedQueue)
+
 				knownOrders.OutsideOrders = mergedQueue.OutsideOrders
 				assignedOrder := assignOrders(allElevatorData, mergedQueue)
 				currentOrder = calcNextOrderAndFloor(assignedOrder)
@@ -379,6 +386,7 @@ func QueueHandler(chNewFloor chan int, chNewOrder chan src.ButtonOrder, chNewDir
 				if storedDeletedOrder > 0 { knownOrders = addDeletedOrders(knownOrders, memoOfDeletedOrders)}
 				
 				//tools.PrintQueueHandler(mergedQueue, assignedOrder)
+				println("Assigned Orders:")
 				tools.PrintQueue(assignedOrder)
 				println("Next Floor:", currentOrder.Floor)
 

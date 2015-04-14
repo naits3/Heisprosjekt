@@ -12,8 +12,8 @@ const PORT = "20019"
 var IP string
 var connectionStatus = make(map[string]bool) //map[IP]status
 
-var timeoutLimit time.Duration = 2*time.Second
-var sendPingInterval time.Duration = 400*time.Millisecond
+var timeoutLimit time.Duration = 1*time.Second
+var sendPingInterval time.Duration = 200*time.Millisecond
 
 type networkMessage struct {
 	address string
