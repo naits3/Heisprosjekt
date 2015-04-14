@@ -96,6 +96,8 @@ func assignOrders(queueList []src.ElevatorData, mergedQueue src.ElevatorData) sr
 	}
 
 	ourQueue := queueList[len(queueList) - 1]
+
+	calcTotalCost(&ourQueue)
 	return ourQueue
 }
 

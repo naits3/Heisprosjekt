@@ -13,7 +13,7 @@ var IP string
 var connectionStatus = make(map[string]bool) //map[IP]status
 
 var timeoutLimit time.Duration = 2*time.Second
-var sendPingInterval time.Duration = 200*time.Millisecond
+var sendPingInterval time.Duration = 150*time.Millisecond
 
 type networkMessage struct {
 	address string
