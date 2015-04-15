@@ -96,6 +96,7 @@ func assignOrders(queueList []src.ElevatorData, mergedQueue src.ElevatorData) sr
 	}
 
 	ourQueue := queueList[len(queueList) - 1]
+	calcTotalCost(&ourQueue)
 	return ourQueue
 }
 
@@ -370,7 +371,7 @@ func QueueHandler(chNewFloor chan int, chNewOrder chan src.ButtonOrder, chNewDir
 				
 				
 
-				network.ChQueueReadyToBeSent <- knownOrders
+				
 				mergedQueue := mergeOrders(allElevatorData)
 
 				println("Merged queue:")
@@ -385,6 +386,7 @@ func QueueHandler(chNewFloor chan int, chNewOrder chan src.ButtonOrder, chNewDir
 				chNewOrdersFromQueue <- knownOrders
 				if storedDeletedOrder > 0 { knownOrders = addDeletedOrders(knownOrders, memoOfDeletedOrders)}
 				
+				network.ChQueueReadyToBeSent <- knownOrders
 				//tools.PrintQueueHandler(mergedQueue, assignedOrder)
 				println("Assigned Orders:")
 				tools.PrintQueue(assignedOrder)
