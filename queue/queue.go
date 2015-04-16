@@ -96,7 +96,6 @@ func assignOrders(queueList []src.ElevatorData, mergedQueue src.ElevatorData) sr
 	}
 
 	ourQueue := queueList[len(queueList) - 1]
-
 	calcTotalCost(&ourQueue)
 	return ourQueue
 }
@@ -369,21 +368,16 @@ func QueueHandler(chNewFloor chan int, chNewOrder chan src.ButtonOrder, chNewDir
 				} else {}
 				// --------------------
 
-
 				
 				
 
 				
-				
-
 				mergedQueue := mergeOrders(allElevatorData)
-				
-				//tools.PrintQueue(knownOrders) //FOR TESTING
+
+				println("Merged queue:")
+				tools.PrintQueue(mergedQueue)
 
 				knownOrders.OutsideOrders = mergedQueue.OutsideOrders
-				
-				//tools.PrintQueue(knownOrders) // FOR TESTING
-
 				assignedOrder := assignOrders(allElevatorData, mergedQueue)
 				currentOrder = calcNextOrderAndFloor(assignedOrder)
 				listOfIncomingData = nil
@@ -393,16 +387,13 @@ func QueueHandler(chNewFloor chan int, chNewOrder chan src.ButtonOrder, chNewDir
 				if storedDeletedOrder > 0 { knownOrders = addDeletedOrders(knownOrders, memoOfDeletedOrders)}
 				
 				network.ChQueueReadyToBeSent <- knownOrders
-
 				//tools.PrintQueueHandler(mergedQueue, assignedOrder)
 				println("Assigned Orders:")
 				tools.PrintQueue(assignedOrder)
 				println("Next Floor:", currentOrder.Floor)
 
-
 			case data := <- network.ChDataToQueue:
 				listOfIncomingData = append(listOfIncomingData, data)
-				network.ChReceiptFromQueue <- true
 
 			case newFloor := <- chNewFloor:
 				knownOrders.Floor = newFloor
@@ -412,7 +403,8 @@ func QueueHandler(chNewFloor chan int, chNewOrder chan src.ButtonOrder, chNewDir
 
 			case <- chOrderIsFinished:
 				deleteOrder(currentOrder)
-				
+				println("Order is deleted!")
+
 			case newDirection := <- chNewDirection:
 				knownOrders.Direction = newDirection
 		}

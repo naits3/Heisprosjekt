@@ -88,7 +88,7 @@ func createBroadcastConn() *net.UDPConn{
 
 func GetIPAddress() string {
 
-	return "192.168.0.102" // FOR WINDOWS AND TESTING ONLY!
+	//return "192.168.0.102" // FOR WINDOWS AND TESTING ONLY!
 
 	addrs, err := net.InterfaceAddrs()
     if err != nil {
