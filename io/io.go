@@ -15,6 +15,7 @@ import "time"
 var chButtonOrder = make(chan src.ButtonOrder)
 var chFloorSensor = make(chan int)
 
+
 func InitIo(chCommandFromControl chan src.Command, chButtonOrderToControl chan src.ButtonOrder, chFloorSensorToControl chan int){
 
 	if err:=C.elev_init(); err<0{
@@ -66,9 +67,15 @@ func pollButtonOrders(){
 }
 
 func pollFloorSensors(){
+		
+	lastFloor := -1
+
 	for{
-		if floor := int(C.elev_get_floor_sensor_signal()); floor != -1{
-			chFloorSensor <- floor	
+		floor := int(C.elev_get_floor_sensor_signal())
+		
+		if floor != -1 && floor != lastFloor{
+				chFloorSensor <- floor	
+				lastFloor = floor
 		}
 		time.Sleep(100*time.Millisecond)
 	}
