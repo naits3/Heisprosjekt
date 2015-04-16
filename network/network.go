@@ -12,8 +12,8 @@ const PORT = "20019"
 var IP string
 var connectionStatus = make(map[string]bool) //map[IP]status
 
-var timeoutLimit time.Duration = 2*time.Second
-var sendPingInterval time.Duration = 150*time.Millisecond
+var timeoutLimit time.Duration = 1*time.Second
+var sendPingInterval time.Duration = 200*time.Millisecond
 
 type networkMessage struct {
 	address string
@@ -24,15 +24,14 @@ type networkMessage struct {
 var ChDataToQueue = make(chan src.ElevatorData)
 var ChReadyToMerge = make(chan bool)
 var ChQueueReadyToBeSent = make(chan src.ElevatorData)
-var ChReceiptFromQueue = make(chan bool)
 
 //TESTED:
-func sendPing(broadcastConn *net.UDPConn){
-	dataToSend := <- ChQueueReadyToBeSent		
+func sendPing(broadcastConn *net.UDPConn, chOutgoingData chan src.ElevatorData){
+	dataToSend := <- chOutgoingData		
 	
 	for {
 		select {
-			case outgoingData := <- ChQueueReadyToBeSent:
+			case outgoingData := <- chOutgoingData:
 				dataToSend = outgoingData
 
 			default:
@@ -88,7 +87,7 @@ func createBroadcastConn() *net.UDPConn{
 
 func GetIPAddress() string {
 
-	//return "192.168.0.102" // FOR WINDOWS AND TESTING ONLY!
+	//return "78.91.21.43" // FOR WINDOWS AND TESTING ONLY!
 
 	addrs, err := net.InterfaceAddrs()
     if err != nil {
@@ -121,18 +120,19 @@ func timer(timeout chan bool) {
 func NetworkHandler() {
 	chTimeout := make(chan bool)
 	chReceivedData := make(chan networkMessage)
-	//chSendData := make(chan src.ElevatorData)
+	chSendData := make(chan src.ElevatorData)
 
 	IP = GetIPAddress()	
 	broadcastConn := createBroadcastConn()
 
 	go listenPing(chReceivedData)
-	go sendPing(broadcastConn)
+	go sendPing(broadcastConn, chSendData)
 	go timer(chTimeout)
 
 	for { 
 		select {
 			case data := <- chReceivedData:
+				
 				alreadyReceived := false
 				for storedAddress, status := range connectionStatus {
 					if data.address == storedAddress && status == true {
@@ -144,9 +144,12 @@ func NetworkHandler() {
 					break
 				}
 
+				//println("Received from: ", data.address)
 				connectionStatus[data.address] = true
 				ChDataToQueue <- Unpack(data.elevatorData)
-				<- ChReceiptFromQueue
+
+			case outGoingData := <- ChQueueReadyToBeSent:
+				chSendData <- outGoingData
 
 			case <- chTimeout:
 				//println("Elevators: ") // FOR TESTING!
@@ -155,17 +158,13 @@ func NetworkHandler() {
 					switch status {
 						case true:
 							connectionStatus[address] = false
-							 // FOR TESTING!
+							//println(address) // FOR TESTING!
 						case false:
-							println("Is probably dead!")
 							delete(connectionStatus, address)
 					}
 				}
 			//	println(" ") // FOR TESTING
 				ChReadyToMerge <- true
-
-			default:
-				time.Sleep(100*time.Millisecond)
 		}
 	}
 }

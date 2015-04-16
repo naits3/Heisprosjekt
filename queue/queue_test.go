@@ -176,7 +176,7 @@ func TestQueueHandler(t *testing.T) {
 		}
 	}()
 
-	time.Sleep(10*time.Second)
+	time.Sleep(5*time.Second)
 
 	// chNewOrder <- src.ButtonOrder{1, src.BUTTON_UP}
 	// knownOrders.OutsideOrders[2][0] = DELETE_ORDER
@@ -188,28 +188,6 @@ func TestQueueHandler(t *testing.T) {
 	chOrderIsFinished <- true
 
 	<- done
-}
-
-func TestDebug(t *testing.T) {
-	//knownOrders.OutsideOrders[2][1] = 1
-	//knownOrders.OutsideOrders[0][0] = 1
-	//knownOrders.OutsideOrders[3][0] = 1
-	//knownOrders.InsideOrders[3] = 1
-	knownOrders.InsideOrders[1] = 1
-	knownOrders.ID = 3
-	knownOrders.Floor = 3
-
-	allElevatorData := []src.ElevatorData{knownOrders}
-	mergedQueue := mergeOrders(allElevatorData)
-	knownOrders.OutsideOrders = mergedQueue.OutsideOrders
-
-	assignedOrder := assignOrders(allElevatorData, mergedQueue)
-	currentOrder = calcNextOrderAndFloor(assignedOrder)
-
-	println("Assigned Order: ")
-	tools.PrintQueue(assignedOrder)
-	println("Next floor: ", currentOrder.Floor)
-	println("Button Type: ", currentOrder.ButtonType)
 }
 
 
