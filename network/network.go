@@ -10,22 +10,22 @@ import (
 
 const PORT = "20019"	
 var IP string
-var connectionStatus = make(map[string]bool) //map[IP]status
+var connectedElevators = make(map[string]bool)
 
 var timeoutLimit time.Duration = 1*time.Second
-var sendPingInterval time.Duration = 200*time.Millisecond
+var sendMessageInterval time.Duration = 200*time.Millisecond
 
-type networkMessage struct {
-	address string
-	elevatorData []byte
+type message struct {
+	senderAddress string
+	data []byte
 }
 
-// Channels made for communication across modules
-var ChDataToQueue = make(chan src.ElevatorData)
+
+var ChElevatorDataToQueue = make(chan src.ElevatorData)
 var ChReadyToMerge = make(chan bool)
 var ChQueueReadyToBeSent = make(chan src.ElevatorData)
 
-//TESTED:
+
 func sendPing(broadcastConn *net.UDPConn, chOutgoingData chan src.ElevatorData){
 	dataToSend := <- chOutgoingData		
 	
@@ -36,13 +36,13 @@ func sendPing(broadcastConn *net.UDPConn, chOutgoingData chan src.ElevatorData){
 
 			default:
 				broadcastConn.Write(Pack(dataToSend))
-				time.Sleep(sendPingInterval)
+				time.Sleep(sendMessageInterval)
 		}
 	}
 }
 
-//TESTED:
-func listenPing(chReceivedData chan networkMessage){
+
+func listenPing(chReceivedMessage chan message){
 	
 	UDPAddr, _ := net.ResolveUDPAddr("udp",":"+PORT)
 	var buffer []byte = make([]byte, 1024)
@@ -64,11 +64,11 @@ func listenPing(chReceivedData chan networkMessage){
 		IPaddressAndPortArray := strings.Split(IPaddressAndPort.String(),":")
 		IPaddress := IPaddressAndPortArray[0]
 				
-		chReceivedData <- networkMessage{ IPaddress, buffer[:lengthOfMessage] }
+		chReceivedMessage <- message{ IPaddress, buffer[:lengthOfMessage] }
 	}
 }
 
-// TESTED:
+
 func createBroadcastConn() *net.UDPConn{
 
 	broadcastIP := GetIPAddress()
@@ -86,8 +86,6 @@ func createBroadcastConn() *net.UDPConn{
 
 
 func GetIPAddress() string {
-
-	//return "78.91.21.43" // FOR WINDOWS AND TESTING ONLY!
 
 	addrs, err := net.InterfaceAddrs()
     if err != nil {
@@ -108,7 +106,6 @@ func GetIPAddress() string {
 	return ""
 }
 
-// TESTED:
 func timer(timeout chan bool) {
 	for {
 		time.Sleep(timeoutLimit)
@@ -118,8 +115,8 @@ func timer(timeout chan bool) {
 
 
 func NetworkHandler() {
-	chTimeout := make(chan bool)
-	chReceivedData := make(chan networkMessage)
+	chVerifyConnectedElevators := make(chan bool)
+	chReceivedData := make(chan message)
 	chSendData := make(chan src.ElevatorData)
 
 	IP = GetIPAddress()	
@@ -127,43 +124,38 @@ func NetworkHandler() {
 
 	go listenPing(chReceivedData)
 	go sendPing(broadcastConn, chSendData)
-	go timer(chTimeout)
+	go timer(chVerifyConnectedElevators)
 
 	for { 
 		select {
-			case data := <- chReceivedData:
+			case receivedMessage := <- chReceivedData:
 				
 				alreadyReceived := false
-				for storedAddress, status := range connectionStatus {
-					if data.address == storedAddress && status == true {
+				for storedAddress, status := range connectedElevators {
+					if receivedMessage.senderAddress == storedAddress && status == true {
 						alreadyReceived = true
 					}
 				}
 
-				if (data.address == IP || alreadyReceived) {
+				if (receivedMessage.senderAddress == IP || alreadyReceived) {
 					break
 				}
 
-				//println("Received from: ", data.address)
-				connectionStatus[data.address] = true
-				ChDataToQueue <- Unpack(data.elevatorData)
+				connectedElevators[receivedMessage.senderAddress] = true
+				ChElevatorDataToQueue <- Unpack(receivedMessage.data)
 
 			case outGoingData := <- ChQueueReadyToBeSent:
 				chSendData <- outGoingData
 
-			case <- chTimeout:
-				//println("Elevators: ") // FOR TESTING!
-				for address, status := range connectionStatus{
-					println(address)
+			case <- chVerifyConnectedElevators:
+				for address, status := range connectedElevators{
 					switch status {
 						case true:
-							connectionStatus[address] = false
-							//println(address) // FOR TESTING!
+							connectedElevators[address] = false
 						case false:
-							delete(connectionStatus, address)
+							delete(connectedElevators, address)
 					}
 				}
-			//	println(" ") // FOR TESTING
 				ChReadyToMerge <- true
 		}
 	}
@@ -171,10 +163,5 @@ func NetworkHandler() {
 
 // TODO:
 
-// * implement sendPing() 									| OK
-// * Can we send faster than TimeoutLimit?					| OK
-// * send the received orders to queue 						| OK
-// * make it so we don't receive our queue thru connection 	| OK 
-// * send unique queues only to Queue modules				| OK
-
-
+// Make an initNetwork
+// Make the channels lokal (remove globals ... )
