@@ -15,31 +15,31 @@ const (
 )
 
 var state int 
-var nextFloor int
-var orderFinished bool
-var currentFloor int
+var destinationFloor int
+var currentFloor	 int
+var isOrderFinished	 bool
 
-var chCommandFromControl 	= make(chan src.Command)
-var chButtonOrderToControl 	= make(chan src.ButtonOrder)
-var chFloorSensorToControl	= make(chan int)
+var chCommandToIo 			= make(chan src.Command)
+var chOrderFromIo 			= make(chan src.ButtonOrder)
+var chFloorFromIo			= make(chan int)
 
-
-var chNewFloor				= make(chan int)
-var chNewOrder 				= make(chan src.ButtonOrder)
-var chNewDirection			= make(chan int)
-var chOrderIsFinished 		= make(chan bool)
-var chNewOrdersFromQueue 	= make(chan src.ElevatorData)
-var chNewNextFloorFromQueue = make(chan int)
+var chFloorToQueue			= make(chan int)
+var chOrderToQueue 			= make(chan src.ButtonOrder)
+var chDirectionToQueue		= make(chan int)
+var chOrderFinishedToQueue 	= make(chan bool)
+var chAllOrdersFromQueue 	= make(chan src.ElevatorData)
+var chDestinationFloorFromQueue	= make(chan int)
 var setDoorTimer 			= make(chan bool)
 var chTimeOut				= make(chan bool)
 
 func InitController() {
 	
-	orderFinished = true
+	isOrderFinished = true
 
-	io.InitIo(chCommandFromControl, chButtonOrderToControl, chFloorSensorToControl)
+	io.InitIo(chCommandToIo, chOrderFromIo, chFloorFromIo)
 	goDownUntilReachFloor()	
-	queue.InitQueue(chNewFloor, chNewOrder, chNewDirection, chOrderIsFinished, chNewOrdersFromQueue, chNewNextFloorFromQueue) // Let Queue init network
+	queue.InitQueue(chFloorToQueue, chOrderToQueue, chDirectionToQueue, chOrderFinishedToQueue, chAllOrdersFromQueue, chDestinationFloorFromQueue) // Let Queue init network
+	chFloorToQueue <- currentFloor
 	go controllerHandler()
 	go doorTimer()
 }
@@ -47,38 +47,25 @@ func InitController() {
 func controllerHandler(){
 	for {
 		select {
-			case ioOrder:= <- chButtonOrderToControl:
-				chNewOrder <- ioOrder
+			case ioOrder:= <- chOrderFromIo:
+				chOrderToQueue <- ioOrder
 
-			case currentFloor = <-chFloorSensorToControl:
+			case currentFloor = <-chFloorFromIo:
 				
-				chCommandFromControl  <- src.Command{src.SET_FLOOR_INDICATOR_LAMP,src.ON,currentFloor,src.BUTTON_NONE}
-				
+				chCommandToIo  <- src.Command{src.SET_FLOOR_INDICATOR_LAMP,src.ON,currentFloor,src.BUTTON_NONE}
 				switch state{
 					case IDLE:
-						direction := findElevatorDirection()
-						chNewDirection <- direction
-						chCommandFromControl <- src.Command{src.SET_MOTOR_DIR,direction,-1,src.BUTTON_NONE}
-						if(direction == 0){
-							if(!orderFinished){
-								state = DOOR_OPEN
-								chCommandFromControl <- src.Command{src.SET_DOOR_OPEN_LAMP,src.ON,-1,src.BUTTON_NONE}
-								setDoorTimer <- true
-							}else{
-								state = IDLE
-							}
-						}else{
-							state = MOVING
-						}
+						// feilhaandtering?
+						continue
 
 					case MOVING:
-						direction := findElevatorDirection()
-						chNewDirection <- direction
-						chCommandFromControl <- src.Command{src.SET_MOTOR_DIR,direction,-1,src.BUTTON_NONE}
+						motorDirection := findElevatorDirection()
+						chDirectionToQueue <- motorDirection
+						chCommandToIo <- src.Command{src.SET_MOTOR_DIR,motorDirection,-1,src.BUTTON_NONE}
 
-						if(direction == 0){
+						if(motorDirection == 0){
 							state = DOOR_OPEN
-							chCommandFromControl <- src.Command{src.SET_DOOR_OPEN_LAMP,src.ON,-1,src.BUTTON_NONE}
+							chCommandToIo <- src.Command{src.SET_DOOR_OPEN_LAMP,src.ON,-1,src.BUTTON_NONE}
 							setDoorTimer <- true
 
 						}else{
@@ -87,39 +74,69 @@ func controllerHandler(){
 					case DOOR_OPEN:
 						continue
 					}
-				chNewFloor <- currentFloor
-				
+				chFloorToQueue <- currentFloor
 				
 			case <- chTimeOut:
 					state = IDLE
-					chCommandFromControl <- src.Command{src.SET_DOOR_OPEN_LAMP,src.OFF,-1,src.BUTTON_NONE}
-					chOrderIsFinished <- true
-					orderFinished = true
+					chCommandToIo <- src.Command{src.SET_DOOR_OPEN_LAMP,src.OFF,-1,src.BUTTON_NONE}
+					chOrderFinishedToQueue <- true
+					isOrderFinished = true
 
-			case queueOrders := <-chNewOrdersFromQueue:
+			case queueOrders := <-chAllOrdersFromQueue:
+				//print("C: received orders from Q")
 				setLights(queueOrders)
 		
-			case nextFloor = <-  chNewNextFloorFromQueue:
-					orderFinished = false					
+			case destinationFloor = <-  chDestinationFloorFromQueue:
+				
+				switch state {
+					
+					case IDLE:
+						
+						motorDirection := findElevatorDirection()
+						chDirectionToQueue <- motorDirection
+						
+						if(motorDirection == src.DIR_STOP){
+							state = DOOR_OPEN
+							chCommandToIo <- src.Command{src.SET_DOOR_OPEN_LAMP,src.ON,-1,src.BUTTON_NONE}
+							setDoorTimer <- true
+						
+						}else{
+							isOrderFinished = false
+							chCommandToIo <- src.Command{src.SET_MOTOR_DIR,motorDirection,-1,src.BUTTON_NONE}
+							state = MOVING
+						
+						}		
+
+					case MOVING:
+						isOrderFinished = false
+
+					default:
+						continue
+
+				}							
 		}
 	}
 }
 
 func setLights(knowOrders src.ElevatorData){
 	for floor := 0; floor < src.N_FLOORS; floor ++ {
-		chCommandFromControl <- src.Command{src.SET_BUTTON_LAMP,knowOrders.OutsideOrders[floor][src.BUTTON_UP],     floor,src.BUTTON_UP}
-		chCommandFromControl <- src.Command{src.SET_BUTTON_LAMP,knowOrders.OutsideOrders[floor][src.BUTTON_DOWN],   floor,src.BUTTON_DOWN}
-		chCommandFromControl <- src.Command{src.SET_BUTTON_LAMP,knowOrders.InsideOrders[floor], 					floor,src.BUTTON_INSIDE}
+		chCommandToIo <- src.Command{src.SET_BUTTON_LAMP,knowOrders.OutsideOrders[floor][src.BUTTON_UP],     floor,src.BUTTON_UP}
+		chCommandToIo <- src.Command{src.SET_BUTTON_LAMP,knowOrders.OutsideOrders[floor][src.BUTTON_DOWN],   floor,src.BUTTON_DOWN}
+		chCommandToIo <- src.Command{src.SET_BUTTON_LAMP,knowOrders.InsideOrders[floor], 					floor,src.BUTTON_INSIDE}
 	}
 }
 
 func goDownUntilReachFloor(){
-	chCommandFromControl  <- src.Command{src.SET_MOTOR_DIR,src.DIR_DOWN,-1,src.BUTTON_NONE}
-	currentFloor		  = <- chFloorSensorToControl
-	nextFloor 			  = currentFloor
-	chCommandFromControl  <- src.Command{src.SET_MOTOR_DIR,src.DIR_STOP,-1,src.BUTTON_NONE}
-	chCommandFromControl  <- src.Command{src.SET_FLOOR_INDICATOR_LAMP,src.ON,currentFloor,src.BUTTON_NONE}
+	
+	chCommandToIo  <- src.Command{src.SET_MOTOR_DIR,src.DIR_DOWN,-1,src.BUTTON_NONE}
+
+	currentFloor		 = <- chFloorFromIo
+	destinationFloor 	 = currentFloor
+	chCommandToIo  <- src.Command{src.SET_MOTOR_DIR,src.DIR_STOP,-1,src.BUTTON_NONE}
+	chCommandToIo  <- src.Command{src.SET_FLOOR_INDICATOR_LAMP,src.ON,currentFloor,src.BUTTON_NONE}
 	state = IDLE
+
+
 }
 
 
@@ -136,9 +153,9 @@ func doorTimer(){
 
 
 func findElevatorDirection() int {
-	if(currentFloor<nextFloor){
+	if(currentFloor<destinationFloor){
 		return src.DIR_UP
-	}else if(currentFloor>nextFloor){
+	}else if(currentFloor>destinationFloor){
 		return src.DIR_DOWN
 	}else{
 		return src.DIR_STOP

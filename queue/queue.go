@@ -382,8 +382,9 @@ func QueueHandler(chNewFloor chan int, chNewOrder chan src.ButtonOrder, chNewDir
 				currentOrder = calcNextOrderAndFloor(assignedOrder)
 				listOfIncomingData = nil
 
-				if (currentOrder.Floor != -1) { chNewNextFloorFromQueue <- currentOrder.Floor}
 				chNewOrdersFromQueue <- knownOrders
+				if (currentOrder.Floor != -1) { chNewNextFloorFromQueue <- currentOrder.Floor}
+				
 				if storedDeletedOrder > 0 { knownOrders = addDeletedOrders(knownOrders, memoOfDeletedOrders)}
 				
 				network.ChQueueReadyToBeSent <- knownOrders
