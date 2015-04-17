@@ -51,29 +51,24 @@ func controllerHandler(){
 				chOrderToQueue <- ioOrder
 
 			case currentFloor = <-chFloorFromIo:
-				
 				chCommandToIo  <- src.Command{src.SET_FLOOR_INDICATOR_LAMP,src.ON,currentFloor,src.BUTTON_NONE}
 				switch state{
-					case IDLE:
-						// feilhaandtering?
-						continue
-
+					
 					case MOVING:
 						motorDirection := findElevatorDirection()
 						chDirectionToQueue <- motorDirection
 						chCommandToIo <- src.Command{src.SET_MOTOR_DIR,motorDirection,-1,src.BUTTON_NONE}
 
-						if(motorDirection == 0){
+						if(currentFloor == destinationFloor){
 							state = DOOR_OPEN
 							chCommandToIo <- src.Command{src.SET_DOOR_OPEN_LAMP,src.ON,-1,src.BUTTON_NONE}
 							setDoorTimer <- true
-
-						}else{
-							state = MOVING
 						}
-					case DOOR_OPEN:
+
+					default:
+						// feilhaandtering?
 						continue
-					}
+				}
 				chFloorToQueue <- currentFloor
 				
 			case <- chTimeOut:
@@ -95,7 +90,7 @@ func controllerHandler(){
 						motorDirection := findElevatorDirection()
 						chDirectionToQueue <- motorDirection
 						
-						if(motorDirection == src.DIR_STOP){
+						if(currentFloor == destinationFloor){
 							state = DOOR_OPEN
 							chCommandToIo <- src.Command{src.SET_DOOR_OPEN_LAMP,src.ON,-1,src.BUTTON_NONE}
 							setDoorTimer <- true
@@ -104,7 +99,6 @@ func controllerHandler(){
 							isOrderFinished = false
 							chCommandToIo <- src.Command{src.SET_MOTOR_DIR,motorDirection,-1,src.BUTTON_NONE}
 							state = MOVING
-						
 						}		
 
 					case MOVING:
@@ -112,7 +106,6 @@ func controllerHandler(){
 
 					default:
 						continue
-
 				}							
 		}
 	}
