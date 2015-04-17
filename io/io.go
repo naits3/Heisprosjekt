@@ -12,7 +12,6 @@ import "fmt"
 import "time"
 
 
-
 type Command struct{
 	CommandType int
 	SetValue int
@@ -29,95 +28,94 @@ const(
 
 
 
+func InitIo(chCommandFromControl chan Command, chOrderToControl chan src.ButtonOrder, chFloorToControl chan int){
 
+	err := C.elev_init()
+	if  err < 0 { fmt.Println("Could not initialize hardware") }
 
-func InitIo(chCommandFromControl chan Command, chButtonOrderToControl chan src.ButtonOrder, chFloorSensorToControl chan int){
-
-	var chButtonOrder = make(chan src.ButtonOrder)
-	var chFloorSensor = make(chan int)
-
-	if err:=C.elev_init(); err<0{
-		fmt.Println("Could not initialize hardware")
-	}
-
-	go ioHandler(chCommandFromControl,chButtonOrderToControl,chFloorSensorToControl,chButtonOrder,chFloorSensor)
-	go pollFloorSensors(chFloorSensor)
-	go pollButtonOrders(chButtonOrder)
+	var chOrder = make(chan src.ButtonOrder)
+	var chFloor = make(chan int)
+	
+	go ioManager(chCommandFromControl,chOrderToControl,chFloorToControl,chOrder,chFloor)
+	go pollFloor(chFloor)
+	go pollOrder(chOrder)
 }
 
-func ioHandler(chCommandFromControl chan Command, chButtonOrderToControl chan src.ButtonOrder,chFloorSensorToControl chan int,chButtonOrder chan src.ButtonOrder,chFloorSensor chan int){
+func ioManager(chCommandFromControl chan Command, chOrderToControl chan src.ButtonOrder,chFloorToControl chan int,chOrder chan src.ButtonOrder,chFloor chan int){
 	for{
 		select{
-			case order :=<- chButtonOrder:
-				chButtonOrderToControl <- order
+			case order :=<- chOrder:
+				chOrderToControl <- order
 
-			case floor := <- chFloorSensor:
-				chFloorSensorToControl <- floor
+			case floor := <- chFloor:
+				chFloorToControl <- floor
 
 			case command := <- chCommandFromControl:
-				doCommand(command)
+				runCommand(command)
 		}
 	}
 }
 
-func pollButtonOrders(chButtonOrder chan src.ButtonOrder){
+func pollOrder(chOrder chan src.ButtonOrder){
 	for{
 		for floor := 0; floor < src.N_FLOORS; floor++{
 			
 			if(floor < src.N_FLOORS-1){
-				if(int(C.elev_get_button_signal(C.elev_button_type_t(src.BUTTON_UP), C.int(floor)))==1){
-					chButtonOrder <- src.ButtonOrder{floor, src.BUTTON_UP}
+				if (C.elev_get_button_signal(src.BUTTON_UP, C.int(floor)) == 1) {
+					chOrder <- src.ButtonOrder{floor, src.BUTTON_UP}
 				}
 			}
 			
 			if(floor > 0) { 
-				if(int(C.elev_get_button_signal(C.elev_button_type_t(src.BUTTON_DOWN), C.int(floor)))==1){
-					chButtonOrder <- src.ButtonOrder{floor, src.BUTTON_DOWN}
+				if (C.elev_get_button_signal(src.BUTTON_DOWN, C.int(floor)) == 1) {
+					chOrder <- src.ButtonOrder{floor, src.BUTTON_DOWN}
 				}
 			}
 			
-			if(int(C.elev_get_button_signal(C.elev_button_type_t(src.BUTTON_INSIDE), C.int(floor)))==1){
-				chButtonOrder <- src.ButtonOrder{floor, src.BUTTON_INSIDE}
+			if (C.elev_get_button_signal(src.BUTTON_INSIDE, C.int(floor)) == 1) {
+				chOrder <- src.ButtonOrder{floor, src.BUTTON_INSIDE}
 			}
 		}
 		time.Sleep(40*time.Millisecond)
 	}
 }
 
-func pollFloorSensors(chFloorSensor chan int){
-		
-	lastFloor := -1
+func pollFloor(chFloor chan int){
+	previousFloor := -1
 
-	for{
+	for {
 		floor := int(C.elev_get_floor_sensor_signal())
-		
-		if floor != -1 && floor != lastFloor{
-				chFloorSensor <- floor	
-				lastFloor = floor
+		if floor != -1 && floor != previousFloor{
+				chFloor <- floor	
+				previousFloor = floor
 		}
 		time.Sleep(100*time.Millisecond)
 	}
 }
 
-func doCommand(command Command){
-	switch commandType := command.CommandType; commandType{
+func runCommand(command Command){
+	
+	switch command.CommandType{
+		
 		case SET_MOTOR_DIR:
 			C.elev_set_motor_direction(C.elev_motor_direction_t(command.SetValue))
 		
 		case SET_BUTTON_LAMP:
-			switch buttonType := command.ButtonType;buttonType{
-				case src.BUTTON_UP:
+			switch command.ButtonType{
+				
+				case src.BUTTON_UP:int
 					if(command.Floor < src.N_FLOORS-1) {
 						C.elev_set_button_lamp(C.elev_button_type_t(command.ButtonType), C.int(command.Floor), C.int(command.SetValue))
-						
 					}
+				
 				case src.BUTTON_DOWN:
 					if(command.Floor > 0){
 						C.elev_set_button_lamp(C.elev_button_type_t(command.ButtonType), C.int(command.Floor), C.int(command.SetValue))
-						
 					}
+
 				case src.BUTTON_INSIDE:
 					C.elev_set_button_lamp(C.elev_button_type_t(command.ButtonType), C.int(command.Floor), C.int(command.SetValue))
+			
 			}		
 			
 
