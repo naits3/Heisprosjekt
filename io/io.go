@@ -41,7 +41,12 @@ func InitIo(chCommandFromControl chan Command, chOrderToControl chan src.ButtonO
 	go pollOrder(chOrder)
 }
 
-func ioManager(chCommandFromControl chan Command, chOrderToControl chan src.ButtonOrder,chFloorToControl chan int,chOrder chan src.ButtonOrder,chFloor chan int){
+func ioManager(	chCommandFromControl chan Command, 
+				chOrderToControl 	 chan src.ButtonOrder,
+			   	chFloorToControl 	 chan int, 
+			   	chOrder 		     chan src.ButtonOrder, 
+			   	chFloor 			 chan int){
+	
 	for{
 		select{
 			case order :=<- chOrder:
@@ -103,7 +108,7 @@ func runCommand(command Command){
 		case SET_BUTTON_LAMP:
 			switch command.ButtonType{
 				
-				case src.BUTTON_UP:int
+				case src.BUTTON_UP:
 					if(command.Floor < src.N_FLOORS-1) {
 						C.elev_set_button_lamp(C.elev_button_type_t(command.ButtonType), C.int(command.Floor), C.int(command.SetValue))
 					}

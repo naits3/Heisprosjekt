@@ -424,4 +424,7 @@ func QueueHandler(chNewFloor chan int, chNewOrder chan src.ButtonOrder, chNewDir
 
 // BUGS:
 
-// * potensielt: kan to heiser gå til samme etasje, en med inn og en med opp? I så fall blir det krøll.
+// * potensielt: kan to heiser gå til samme etasje, en med inn og en med opp? I så fall blir det krøll.	|
+// * Hvis vi står i 2. etg, og behandler "opp" ordre, og dermed trykker på "opp"-ordre i 1. etg, vil 
+//   heisen slette ordren i 1... Dette er fordi fnishedOrder blir sendt, og currentOrder er da i 1.		|
+//
