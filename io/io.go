@@ -28,22 +28,24 @@ const(
 )
 
 
-var chButtonOrder = make(chan src.ButtonOrder)
-var chFloorSensor = make(chan int)
+
 
 
 func InitIo(chCommandFromControl chan Command, chButtonOrderToControl chan src.ButtonOrder, chFloorSensorToControl chan int){
+
+	var chButtonOrder = make(chan src.ButtonOrder)
+	var chFloorSensor = make(chan int)
 
 	if err:=C.elev_init(); err<0{
 		fmt.Println("Could not initialize hardware")
 	}
 
-	go ioHandler(chCommandFromControl,chButtonOrderToControl,chFloorSensorToControl)
-	go pollFloorSensors()
-	go pollButtonOrders()
+	go ioHandler(chCommandFromControl,chButtonOrderToControl,chFloorSensorToControl,chButtonOrder,chFloorSensor)
+	go pollFloorSensors(chFloorSensor)
+	go pollButtonOrders(chButtonOrder)
 }
 
-func ioHandler(chCommandFromControl chan Command, chButtonOrderToControl chan src.ButtonOrder,chFloorSensorToControl chan int){
+func ioHandler(chCommandFromControl chan Command, chButtonOrderToControl chan src.ButtonOrder,chFloorSensorToControl chan int,chButtonOrder chan src.ButtonOrder,chFloorSensor chan int){
 	for{
 		select{
 			case order :=<- chButtonOrder:
@@ -58,7 +60,7 @@ func ioHandler(chCommandFromControl chan Command, chButtonOrderToControl chan sr
 	}
 }
 
-func pollButtonOrders(){
+func pollButtonOrders(chButtonOrder chan src.ButtonOrder){
 	for{
 		for floor := 0; floor < src.N_FLOORS; floor++{
 			
@@ -82,7 +84,7 @@ func pollButtonOrders(){
 	}
 }
 
-func pollFloorSensors(){
+func pollFloorSensors(chFloorSensor chan int){
 		
 	lastFloor := -1
 
