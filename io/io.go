@@ -12,11 +12,27 @@ import "fmt"
 import "time"
 
 
+
+type Command struct{
+	CommandType int
+	SetValue int
+	Floor int
+	ButtonType int
+}
+
+const(
+	SET_BUTTON_LAMP				= 0
+	SET_MOTOR_DIR				= 1
+	SET_FLOOR_INDICATOR_LAMP	= 2
+	SET_DOOR_OPEN_LAMP			= 3
+)
+
+
 var chButtonOrder = make(chan src.ButtonOrder)
 var chFloorSensor = make(chan int)
 
 
-func InitIo(chCommandFromControl chan src.Command, chButtonOrderToControl chan src.ButtonOrder, chFloorSensorToControl chan int){
+func InitIo(chCommandFromControl chan Command, chButtonOrderToControl chan src.ButtonOrder, chFloorSensorToControl chan int){
 
 	if err:=C.elev_init(); err<0{
 		fmt.Println("Could not initialize hardware")
@@ -27,7 +43,7 @@ func InitIo(chCommandFromControl chan src.Command, chButtonOrderToControl chan s
 	go pollButtonOrders()
 }
 
-func ioHandler(chCommandFromControl chan src.Command, chButtonOrderToControl chan src.ButtonOrder,chFloorSensorToControl chan int){
+func ioHandler(chCommandFromControl chan Command, chButtonOrderToControl chan src.ButtonOrder,chFloorSensorToControl chan int){
 	for{
 		select{
 			case order :=<- chButtonOrder:
@@ -81,12 +97,12 @@ func pollFloorSensors(){
 	}
 }
 
-func doCommand(command src.Command){
+func doCommand(command Command){
 	switch commandType := command.CommandType; commandType{
-		case src.SET_MOTOR_DIR:
+		case SET_MOTOR_DIR:
 			C.elev_set_motor_direction(C.elev_motor_direction_t(command.SetValue))
 		
-		case src.SET_BUTTON_LAMP:
+		case SET_BUTTON_LAMP:
 			switch buttonType := command.ButtonType;buttonType{
 				case src.BUTTON_UP:
 					if(command.Floor < src.N_FLOORS-1) {
@@ -103,10 +119,10 @@ func doCommand(command src.Command){
 			}		
 			
 
-		case src.SET_FLOOR_INDICATOR_LAMP:
+		case SET_FLOOR_INDICATOR_LAMP:
 			C.elev_set_floor_indicator(C.int(command.Floor))
 		
-		case src.SET_DOOR_OPEN_LAMP:
+		case SET_DOOR_OPEN_LAMP:
 			C.elev_set_door_open_lamp(C.int(command.SetValue))
 	}
 }
