@@ -28,7 +28,6 @@ type QueueMessage struct {
 
 var ChElevatorDataToQueue 	= make(chan QueueMessage)
 var ChOrderToQueue 			= make(chan src.ButtonOrder)
-var ChReadyToMerge 			= make(chan bool)
 var ChIDFromNetwork			= make(chan string)
 var ChQueueReadyToBeSent 	= make(chan src.ElevatorData)
 var ChOrderFromQueue		= make(chan src.ButtonOrder)
@@ -179,8 +178,6 @@ func NetworkHandler() {
 							delete(connectedElevators, address)
 					}
 				}
-				
-				ChReadyToMerge <- true
 		}
 	}
 }

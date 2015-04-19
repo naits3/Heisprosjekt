@@ -106,9 +106,9 @@ func TestQueueManager(t *testing.T) {
 	//time.Sleep(2*time.Second)
 	chFloorFromController <- 2
 
-	time.Sleep(3*time.Second)
+	//time.Sleep(3*time.Second)
 
-	chOrderFromController <- src.ButtonOrder{1, src.BUTTON_DOWN}
+	//chOrderFromController <- src.ButtonOrder{1, src.BUTTON_DOWN}
 	// tools.PrintQueue(elevatorQueues[ourID])
 
 	// //time.Sleep(1*time.Second)

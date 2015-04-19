@@ -18,7 +18,9 @@ const (
 var ourID			string
 var globalOrders    src.ElevatorData
 var currentOrder	src.ButtonOrder
-var elevatorQueues	= make(map[string] src.ElevatorData) // Must use pointer to let golang be able to edit the map! :(
+var elevatorQueues	= make(map[string] src.ElevatorData)
+var timeoutLimit time.Duration = 1*time.Second
+
 
 // TESTED:
 func mergeOrders(elevatorQueues map[string] src.ElevatorData) src.ElevatorData {
@@ -161,22 +163,30 @@ func deleteOrder(ID string, order src.ButtonOrder) {
 // 					chGlobalOrdersToController, 
 // 					chNewNextFloorFromQueue)
 // }
-
+func timer(timeout chan bool) {
+	for {
+		time.Sleep(timeoutLimit)
+		timeout <- true
+	}
+}
 
 func queueManager(chFloorFromController chan int, chOrderFromController chan src.ButtonOrder, chDirectionFromController chan int, chFinishedFromController chan bool, chGlobalOrdersToController chan src.ElevatorData, chNewNextFloorFromQueue chan int) {
+	var chUpdateGlobalOrders = make(chan bool)
+
 	go network.NetworkHandler()
 	ourID = <- network.ChIDFromNetwork
 	var InitialQueue src.ElevatorData
 
 	InitialQueue.Floor = <- chFloorFromController
 	elevatorQueues[ourID] = InitialQueue
-	
+
 	network.ChQueueReadyToBeSent <- elevatorQueues[ourID]	
+	go timer(chUpdateGlobalOrders)
 
 	for {
 		select {
 			
-			case <- network.ChReadyToMerge:
+			case <- chUpdateGlobalOrders:
 				globalOrders = mergeOrders(elevatorQueues)
 				chGlobalOrdersToController <- globalOrders
 
