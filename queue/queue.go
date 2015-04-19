@@ -142,10 +142,12 @@ func addOrder(ID string, order src.ButtonOrder) {
 
 
 func deleteOrder(ID string, order src.ButtonOrder) {
-	tmp := elevatorQueues[ID]
-	tmp.InsideOrders[order.Floor] = EMPTY
-	tmp.OutsideOrders[order.Floor][order.ButtonType] = EMPTY
-	elevatorQueues[ID] = tmp
+	if (ButtonOrder.Floor != -1 && ButtonOrder.ButtonType != src.BUTTON_NONE) {
+		tmp := elevatorQueues[ID]
+		tmp.InsideOrders[order.Floor] = EMPTY
+		tmp.OutsideOrders[order.Floor][order.ButtonType] = EMPTY
+		elevatorQueues[ID] = tmp
+	}
 }
 
 
