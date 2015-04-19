@@ -79,7 +79,7 @@ func calcNextOrderAndFloor(queueMatrix src.ElevatorData) src.ButtonOrder {
 				}
 			}
 
-			for floor := src.N_FLOORS - 1; floor > 0; floor -- {
+			for floor := src.N_FLOORS - 1; floor >= 0; floor -- {
 				if (queueMatrix.OutsideOrders[floor][src.BUTTON_DOWN] == ORDER || queueMatrix.InsideOrders[floor] == ORDER) {
 					currentOrder = src.ButtonOrder{floor, src.BUTTON_DOWN}
 					return currentOrder
@@ -92,9 +92,10 @@ func calcNextOrderAndFloor(queueMatrix src.ElevatorData) src.ButtonOrder {
 					return currentOrder
 				}
 			}
+
 		case src.DIR_DOWN:
 			
-			for floor := queueMatrix.Floor; floor > 0; floor -- {
+			for floor := queueMatrix.Floor; floor >= 0; floor -- {
 				if (queueMatrix.OutsideOrders[floor][src.BUTTON_DOWN] == ORDER || queueMatrix.InsideOrders[floor] == ORDER) {
 					currentOrder = src.ButtonOrder{floor, src.BUTTON_DOWN}
 					return currentOrder
@@ -215,6 +216,8 @@ func queueManager(chFloorFromController chan int, chOrderFromController chan src
 			case <- chFinishedFromController:
 				deleteOrder(ourID, currentOrder)
 				network.ChQueueReadyToBeSent <- elevatorQueues[ourID]
+				currentOrder = calcNextOrderAndFloor(elevatorQueues[ourID])
+				chNewNextFloorFromQueue <- currentOrder.Floor
 
 			case direction := <- chDirectionFromController:
 				tmp := elevatorQueues[ourID]
