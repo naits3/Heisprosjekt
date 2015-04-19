@@ -99,7 +99,7 @@ func sendOrder(broadcastConn *net.UDPConn, message []byte) {
 
 
 func GetIPAddress() string {
-	return "192.168.0.102"
+	//return "192.168.0.102"
 	addrs, err := net.InterfaceAddrs()
     if err != nil {
     	println(err)

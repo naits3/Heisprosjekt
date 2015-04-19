@@ -26,8 +26,8 @@ func InitController() {
 	chFloorFromIo				:= make(chan int)
 
 	chFloorToQueue				:= make(chan int)
-	chOrderToQueue 				:= make(chan src.ButtonOrder)
-	chDirectionToQueue			:= make(chan int)
+	chOrderToQueue 				:= make(chan src.ButtonOrder, 10)
+	chDirectionToQueue			:= make(chan int, 10)
 	chOrderFinishedToQueue 		:= make(chan bool)
 	chAllOrdersFromQueue 		:= make(chan src.ElevatorData)
 	chDestinationFloorFromQueue	:= make(chan int)
@@ -42,7 +42,7 @@ func InitController() {
 	state 			= IDLE
 	isOrderFinished = true
 	
-	queue.InitQueue(chFloorToQueue, chOrderToQueue, chDirectionToQueue, chOrderFinishedToQueue, 
+	go queue.QueueManager(chFloorToQueue, chOrderToQueue, chDirectionToQueue, chOrderFinishedToQueue, 
 					chAllOrdersFromQueue, chDestinationFloorFromQueue)
 
 	chFloorToQueue <- currentFloor
@@ -103,7 +103,7 @@ func controllerManager( chCommandToIo chan io.Command,
 				setLights(ordersFromQueue,chCommandToIo)
 		
 			case destinationFloor = <- chDestinationFloorFromQueue:
-				
+				println("destinationFloor: ", destinationFloor)
 				switch state{
 					
 					case IDLE:

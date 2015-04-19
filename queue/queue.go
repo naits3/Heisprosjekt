@@ -6,7 +6,7 @@ import (
 	"Heisprosjekt/src"
 	"Heisprosjekt/network"
 	"time"
-	//"Heisprosjekt/tools"
+	"Heisprosjekt/tools"
 )
 
 const (
@@ -35,6 +35,8 @@ func mergeOrders(elevatorQueues map[string] src.ElevatorData) src.ElevatorData {
 			}
 		}
 	}
+
+	mergedData.InsideOrders = elevatorQueues[ourID].InsideOrders
 	return mergedData
 }
 
@@ -147,7 +149,7 @@ func deleteOrder(ID string, order src.ButtonOrder) {
 }
 
 
-// func InitQueue(chFloorFromController chan int, chOrderFromController chan src.ButtonOrder, chDirectionFromController chan int, chFinishedFromController chan bool, chGlobalOrdersToController chan src.ElevatorData, chNewNextFloorFromQueue chan int) {
+// func InitQueue(chFloorFromController chan int, chOrderFromController chan src.ButtonOrder, chDirectionFromController chan int, chFinishedFromController chan bool, chGlobalOrdersToController chan src.ElevatorData, chDestinationFloorToController chan int) {
 // 	go network.NetworkHandler()
 // 	ourID = <- network.ChIDFromNetwork
 // 	var InitialQueue src.ElevatorData
@@ -162,8 +164,9 @@ func deleteOrder(ID string, order src.ButtonOrder) {
 // 					chDirectionFromController, 
 // 					chFinishedFromController, 
 // 					chGlobalOrdersToController, 
-// 					chNewNextFloorFromQueue)
+// 					chDestinationFloorToController)
 // }
+
 func timer(timeout chan bool) {
 	for {
 		time.Sleep(timeoutLimit)
@@ -171,7 +174,7 @@ func timer(timeout chan bool) {
 	}
 }
 
-func queueManager(chFloorFromController chan int, chOrderFromController chan src.ButtonOrder, chDirectionFromController chan int, chFinishedFromController chan bool, chGlobalOrdersToController chan src.ElevatorData, chNewNextFloorFromQueue chan int) {
+func QueueManager(chFloorFromController chan int, chOrderFromController chan src.ButtonOrder, chDirectionFromController chan int, chFinishedFromController chan bool, chGlobalOrdersToController chan src.ElevatorData, chDestinationFloorToController chan int) {
 	var chUpdateGlobalOrders = make(chan bool)
 
 	go network.NetworkHandler()
@@ -190,11 +193,13 @@ func queueManager(chFloorFromController chan int, chOrderFromController chan src
 			case <- chUpdateGlobalOrders:
 				globalOrders = mergeOrders(elevatorQueues)
 				chGlobalOrdersToController <- globalOrders
+				println(" ---- ORDERS ------")
+				tools.PrintQueue(elevatorQueues[ourID])
 
 			case order := <- network.ChOrderToQueue:
 				assignOrder(elevatorQueues, order)
 				currentOrder = calcNextOrderAndFloor(elevatorQueues[ourID])
-				chNewNextFloorFromQueue <- currentOrder.Floor
+				if currentOrder.Floor != -1 {chDestinationFloorToController <- currentOrder.Floor}
 				network.ChQueueReadyToBeSent <- elevatorQueues[ourID]
 
 			case updatedQueue := <- network.ChElevatorDataToQueue:
@@ -210,14 +215,16 @@ func queueManager(chFloorFromController chan int, chOrderFromController chan src
 				network.ChOrderFromQueue <- order
 				assignOrder(elevatorQueues, order)
 				currentOrder = calcNextOrderAndFloor(elevatorQueues[ourID])
-				chNewNextFloorFromQueue <- currentOrder.Floor
+				println("sending nextfloor to C")
+				if currentOrder.Floor != -1 {chDestinationFloorToController <- currentOrder.Floor}
+				println("... sent!")
 				network.ChQueueReadyToBeSent <- elevatorQueues[ourID]
 
 			case <- chFinishedFromController:
 				deleteOrder(ourID, currentOrder)
 				network.ChQueueReadyToBeSent <- elevatorQueues[ourID]
 				currentOrder = calcNextOrderAndFloor(elevatorQueues[ourID])
-				chNewNextFloorFromQueue <- currentOrder.Floor
+				if currentOrder.Floor != -1 {chDestinationFloorToController <- currentOrder.Floor}
 
 			case direction := <- chDirectionFromController:
 				tmp := elevatorQueues[ourID]
@@ -239,7 +246,7 @@ func queueManager(chFloorFromController chan int, chOrderFromController chan src
 
 				network.ChQueueReadyToBeSent <- elevatorQueues[ourID]
 				currentOrder = calcNextOrderAndFloor(elevatorQueues[ourID])
-				chNewNextFloorFromQueue <- currentOrder.Floor
+				if currentOrder.Floor != -1 {chDestinationFloorToController <- currentOrder.Floor}
 
 			default:
 				time.Sleep(100*time.Millisecond)

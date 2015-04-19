@@ -19,6 +19,9 @@ type Command struct{
 	ButtonType int
 }
 
+
+
+
 const(
 	SET_BUTTON_LAMP				= 0
 	SET_MOTOR_DIR				= 1
@@ -62,24 +65,41 @@ func ioManager(	chCommandFromControl chan Command,
 }
 
 func pollOrder(chOrder chan src.ButtonOrder){
+	
+	var order[src.N_FLOORS][3]int
+
 	for{
 		for floor := 0; floor < src.N_FLOORS; floor++{
 			
 			if(floor < src.N_FLOORS-1){
-				if (C.elev_get_button_signal(src.BUTTON_UP, C.int(floor)) == 1) {
+				if (C.elev_get_button_signal(src.BUTTON_UP, C.int(floor)) == 1 && order[floor][src.BUTTON_UP] == 0) {
 					chOrder <- src.ButtonOrder{floor, src.BUTTON_UP}
+					order[floor][src.BUTTON_UP] = 1
+				}else if(C.elev_get_button_signal(src.BUTTON_UP, C.int(floor)) == 0 && order[floor][src.BUTTON_UP] == 1){
+					order[floor][src.BUTTON_UP] = 0
 				}
+				
 			}
-			
-			if(floor > 0) { 
-				if (C.elev_get_button_signal(src.BUTTON_DOWN, C.int(floor)) == 1) {
+
+
+			if(floor > 0){
+				if (C.elev_get_button_signal(src.BUTTON_DOWN, C.int(floor)) == 1 && order[floor][src.BUTTON_DOWN] == 0) {
 					chOrder <- src.ButtonOrder{floor, src.BUTTON_DOWN}
+					order[floor][src.BUTTON_DOWN] = 1
+				}else if(C.elev_get_button_signal(src.BUTTON_DOWN, C.int(floor)) == 0 && order[floor][src.BUTTON_DOWN] == 1){
+					order[floor][src.BUTTON_DOWN] = 0
 				}
+				
 			}
 			
-			if (C.elev_get_button_signal(src.BUTTON_INSIDE, C.int(floor)) == 1) {
+
+			if(C.elev_get_button_signal(src.BUTTON_INSIDE, C.int(floor)) == 1 && order[floor][src.BUTTON_INSIDE] == 0) {
 				chOrder <- src.ButtonOrder{floor, src.BUTTON_INSIDE}
+				order[floor][src.BUTTON_INSIDE] = 1
+			}else if(C.elev_get_button_signal(src.BUTTON_INSIDE, C.int(floor)) == 0 && order[floor][src.BUTTON_INSIDE] == 1){
+				order[floor][src.BUTTON_INSIDE] = 0
 			}
+			
 		}
 		time.Sleep(40*time.Millisecond)
 	}
@@ -94,7 +114,7 @@ func pollFloor(chFloor chan int){
 				chFloor <- floor	
 				previousFloor = floor
 		}
-		time.Sleep(100*time.Millisecond)
+		time.Sleep(50*time.Millisecond)
 	}
 }
 
