@@ -29,8 +29,8 @@ type QueueMessage struct {
 var ChElevatorDataToQueue 	= make(chan QueueMessage)
 var ChOrderToQueue 			= make(chan src.ButtonOrder)
 var ChIDFromNetwork			= make(chan string)
-var ChQueueReadyToBeSent 	= make(chan src.ElevatorData)
-var ChOrderFromQueue		= make(chan src.ButtonOrder)
+var ChQueueReadyToBeSent 	= make(chan src.ElevatorData, 2)
+var ChOrderFromQueue		= make(chan src.ButtonOrder, 2)
 
 
 func sendPing(broadcastConn *net.UDPConn, chOutgoingData chan src.ElevatorData){
@@ -157,7 +157,6 @@ func NetworkHandler() {
 					ChElevatorDataToQueue <- QueueMessage{receivedMessage.senderAddress, UnpackQueue(receivedMessage.data)}
 
 				}else {
-					println("sending order..")
 					ChOrderToQueue <- UnpackOrder(receivedMessage.data)
 				}
 				
