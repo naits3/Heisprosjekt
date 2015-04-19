@@ -151,7 +151,7 @@ func doorTimer(chStartTimer chan bool, chTimeOut chan bool){
 	
 	for{
 		<-chStartTimer
-		time.Sleep(1*time.Second)
+		time.Sleep(2*time.Second)
 		chTimeOut <- true		
 	}
 }
