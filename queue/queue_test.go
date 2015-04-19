@@ -102,10 +102,10 @@ func TestQueueManager(t *testing.T) {
 		}
 	}()
 
-	chFloorFromController <- 2
+	chFloorFromController <- 3
 
 	time.Sleep(3*time.Second)
-	chOrderFromController <- src.ButtonOrder{3, src.BUTTON_DOWN}
+	chOrderFromController <- src.ButtonOrder{0, src.BUTTON_UP}
 
 	//time.Sleep(2*time.Second)
 	//chFinishedFromController <- true

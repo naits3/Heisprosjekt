@@ -220,7 +220,7 @@ func queueManager(chFloorFromController chan int, chOrderFromController chan src
 				tmp := elevatorQueues[ourID]
 				tmp.Direction = direction
 				elevatorQueues[ourID] = tmp
-				//network.ChQueueReadyToBeSent <- elevatorQueues[ourID]
+				network.ChQueueReadyToBeSent <- elevatorQueues[ourID]
 
 			case elevator := <- network.ChLostElevator:
 				dataToDistrubute := elevatorQueues[elevator]
@@ -235,7 +235,9 @@ func queueManager(chFloorFromController chan int, chOrderFromController chan src
 				}
 
 				network.ChQueueReadyToBeSent <- elevatorQueues[ourID]
-				
+				currentOrder = calcNextOrderAndFloor(elevatorQueues[ourID])
+				chNewNextFloorFromQueue <- currentOrder.Floor
+
 			default:
 				time.Sleep(100*time.Millisecond)
 		}
