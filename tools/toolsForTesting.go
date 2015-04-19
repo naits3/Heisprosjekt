@@ -29,7 +29,6 @@ func PrintQueue(queueData src.ElevatorData) {
 		}
 		println(" ")
 	}
-	println(" ID:",queueData.ID)
 	println()
 }
 
@@ -47,15 +46,28 @@ func BroadcastElevatorData() {
 	conn, _ := net.DialUDP("udp",nil,addr)
 	var data src.ElevatorData
 
-	data.OutsideOrders[1][1] = 1
-	data.OutsideOrders[2][1] = 1
-	data.OutsideOrders[0][0] = 1
-	data.ID = 143
+	//data.OutsideOrders[1][1] = 1
+	//data.OutsideOrders[2][1] = 1
+	//data.OutsideOrders[0][0] = 1
+	//data.ID = 143
 
 	for {
 		time.Sleep(time.Second)
 		conn.Write(network.PackQueue(data))
 		println("Wrote data with n = !", len(network.PackQueue(data)))
+	}
+}
+
+func BroadcastOrder() {
+	host := "192.168.0.255:20019"
+	addr,_ := net.ResolveUDPAddr("udp",host)
+	conn, _ := net.DialUDP("udp",nil,addr)
+	data := src.ButtonOrder{3, src.BUTTON_UP}
+
+	for {
+		time.Sleep(time.Second)
+		conn.Write(network.PackOrder(data))
+		println("Wrote data with n = !", len(network.PackOrder(data)))
 	}
 }
 
@@ -78,7 +90,15 @@ func ListenForData() {
 			return
 		}
 				
-		PrintQueue(network.UnpackQueue(buffer[:lengthOfMessage]))
+		
+		if (lengthOfMessage < 50) {
+			order := network.UnpackOrder(buffer[:lengthOfMessage])
+			println("Received order! n = ", lengthOfMessage)
+			println("Floor: ", order.Floor, "\nType: ", order.ButtonType)
+
+		}else {
+			PrintQueue(network.UnpackQueue(buffer[:lengthOfMessage]))
+		}
 	}
 }
 

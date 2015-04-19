@@ -3,7 +3,7 @@ package network
 import (
 	"testing"
 	"time"
-	//"Heisprosjekt/src"
+	"Heisprosjekt/src"
 )
 
 func TestGetIP(t *testing.T) {
@@ -41,26 +41,42 @@ func TestListenPing(t *testing.T) {
 
 
 func TestNetworkHandler(t *testing.T) {
-	NetworkHandler()
+	done := make(chan bool)
+	go NetworkHandler()
 	
-	// test := make(map[string]bool)
-	// test["hei"] = true
-	// //delete(test,"hei")
+	go func() {
+		for {
+			select {
+				case <- ChElevatorDataToQueue:
+					println("Got elevatorData")
 
-	// println("1:")
-	// for key, value := range test{
-		
-	// 	println(key+":", value)
-	// 	delete(test, key)
-	// }
+				case order := <- ChOrderToQueue:
+					println("t Q: -- floor ", order.Floor, ", type ", order.ButtonType)
 
-	// println("2:")
-	// for key, value := range test{
-	// 	println(key+":", value)
-	// 	//delete(test, key)
-	// }
-}
+				case <- ChReadyToMerge:
+					println("Ready to merge. ConnectionStatus: ")
+					for ID, status := range connectedElevators {
+						println("ID: ", ID, "status: ", status)
+					}
+					println("")
 
-func TestPacking(t *testing.T) {
+				default:
+					time.Sleep(100*time.Millisecond)
+			}
+		}
+
+	}()
+
+	var elevatorData src.ElevatorData
+	elevatorData.Floor = 2
+	elevatorData.Direction = src.DIR_DOWN
 	
+	ChQueueReadyToBeSent <- elevatorData
+
+	//time.Sleep(2*time.Second)
+
+	//ChOrderFromQueue <- src.ButtonOrder{2, src.BUTTON_DOWN}
+
+
+	<- done
 }

@@ -12,7 +12,7 @@ const PORT = "20019"
 var IP string
 var connectedElevators = make(map[string]bool)
 
-var timeoutLimit time.Duration = 1*time.Second
+var timeoutLimit time.Duration = 2*time.Second
 var sendMessageInterval time.Duration = 200*time.Millisecond
 
 type message struct {
@@ -26,10 +26,10 @@ type QueueMessage struct {
 }
 
 
-var ChElevatorDataToQueue 	= make(chan src.ElevatorData)
+var ChElevatorDataToQueue 	= make(chan QueueMessage)
 var ChOrderToQueue 			= make(chan src.ButtonOrder)
-var ChQueueMessage			= make(chan QueueMessage)
 var ChReadyToMerge 			= make(chan bool)
+var ChIDFromNetwork			= make(chan string)
 var ChQueueReadyToBeSent 	= make(chan src.ElevatorData)
 var ChOrderFromQueue		= make(chan src.ButtonOrder)
 
@@ -73,7 +73,6 @@ func listenPing(chReceivedMessage chan message){
 		IPaddress := IPaddressAndPortArray[0]
 		
 		chReceivedMessage <- message{ IPaddress, buffer[:lengthOfMessage] }
-		println("received data, n= ", lengthOfMessage)
 	}
 }
 
@@ -91,6 +90,11 @@ func createBroadcastConn() *net.UDPConn{
 	broadcastConn, err := net.DialUDP("udp",nil,UDPAddr)
 	if err != nil {print("Error creating UDP") }// Error handling here}
 	return broadcastConn
+}
+
+
+func sendOrder(broadcastConn *net.UDPConn, message []byte) {
+	broadcastConn.Write(message)
 }
 
 
@@ -115,6 +119,7 @@ func GetIPAddress() string {
 	return ""
 }
 
+
 func timer(timeout chan bool) {
 	for {
 		time.Sleep(timeoutLimit)
@@ -129,34 +134,41 @@ func NetworkHandler() {
 	chSendData := make(chan src.ElevatorData)
 
 	IP = GetIPAddress()	
+	ChIDFromNetwork <- IP
 	broadcastConn := createBroadcastConn()
 
 	go listenPing(chReceivedData)
 	go sendPing(broadcastConn, chSendData)
 	go timer(chVerifyConnectedElevators)
 
+	outGoingData :=  <- ChQueueReadyToBeSent
+	chSendData <- outGoingData
+
 	for { 
 		select {
+			
 			case receivedMessage := <- chReceivedData:
-				// Have to distinct between ping and orders
-				alreadyReceived := false
-				for storedAddress, status := range connectedElevators {
-					if receivedMessage.senderAddress == storedAddress && status == true {
-						alreadyReceived = true
-					}
-				}
-
-				if (receivedMessage.senderAddress == IP || alreadyReceived) {
+				if (receivedMessage.senderAddress == IP) {
 					break
 				}
 
 				connectedElevators[receivedMessage.senderAddress] = true
+				// Need to find out how to receive multiple data with JSON...
+				if (len(receivedMessage.data) > 50) {
+					ChElevatorDataToQueue <- QueueMessage{receivedMessage.senderAddress, UnpackQueue(receivedMessage.data)}
 
-				ChElevatorDataToQueue <- UnpackQueue(receivedMessage.data)
+				}else {
+					println("sending order..")
+					ChOrderToQueue <- UnpackOrder(receivedMessage.data)
+				}
 				
 
 			case outGoingData := <- ChQueueReadyToBeSent:
 				chSendData <- outGoingData
+
+			case order := <- ChOrderFromQueue:
+				packedOrder := PackOrder(order)
+				sendOrder(broadcastConn, packedOrder)
 
 			case <- chVerifyConnectedElevators:
 				for address, status := range connectedElevators{
@@ -167,6 +179,7 @@ func NetworkHandler() {
 							delete(connectedElevators, address)
 					}
 				}
+				
 				ChReadyToMerge <- true
 		}
 	}

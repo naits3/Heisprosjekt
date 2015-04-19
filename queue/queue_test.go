@@ -5,7 +5,6 @@ import (
 	"time"
 	"Heisprosjekt/src"
 	"Heisprosjekt/tools"
-	"Heisprosjekt/network"
 )
 
 func TestCalcOrderCost(t *testing.T) {
@@ -73,7 +72,7 @@ func TestQueueManager(t *testing.T) {
 
 
 
-	InitQueue(	chFloorFromController, 
+	go queueManager(	chFloorFromController, 
 				chOrderFromController, 
 				chDirectionFromController, 
 				chFinishedFromController, 
@@ -85,7 +84,15 @@ func TestQueueManager(t *testing.T) {
 			select {
 			
 				case globOrd := <- chGlobalOrdersToController:
+					println(" --------- ORDERS ---------- ")
+					println("Global Orders: ")
 					tools.PrintQueue(globOrd)
+					
+					for id, queue := range elevatorQueues {
+						println(id)
+						tools.PrintQueue(queue)
+					}
+
 
 				case floor := <- chNewNextFloorFromQueue:
 					println("next floor: ", floor)
@@ -96,22 +103,21 @@ func TestQueueManager(t *testing.T) {
 		}
 	}()
 
-	time.Sleep(1*time.Second)
-	chDirectionFromController <- src.DIR_DOWN
+	//time.Sleep(2*time.Second)
 	chFloorFromController <- 2
 
-	time.Sleep(1*time.Second)
+	time.Sleep(3*time.Second)
 
 	chOrderFromController <- src.ButtonOrder{1, src.BUTTON_DOWN}
-	tools.PrintQueue(elevatorQueues[ourID])
+	// tools.PrintQueue(elevatorQueues[ourID])
 
-	//time.Sleep(1*time.Second)
-	//chFinishedFromController <- true
-	//tools.PrintQueue(elevatorQueues[ourID])
+	// //time.Sleep(1*time.Second)
+	// //chFinishedFromController <- true
+	// //tools.PrintQueue(elevatorQueues[ourID])
 
-	time.Sleep(1*time.Second)
-	println("Global Queue:")
-	network.ChReadyToMerge <- true
+	// time.Sleep(1*time.Second)
+	// println("Global Queue:")
+	// network.ChReadyToMerge <- true
 
 	<- done
 }

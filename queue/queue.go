@@ -144,23 +144,35 @@ func deleteOrder(ID string, order src.ButtonOrder) {
 }
 
 
-func InitQueue(ChFloorFromController chan int, chOrderFromController chan src.ButtonOrder, chDirectionFromController chan int, chFinishedFromController chan bool, chGlobalOrdersToController chan src.ElevatorData, chNewNextFloorFromQueue chan int) {
-	//go network.NetworkHandler()
-	//ourID := network.GetIPAddress()
-	var emptyQueue src.ElevatorData
-	ourID = "192.168.0.102"
-	elevatorQueues[ourID] = emptyQueue
+// func InitQueue(chFloorFromController chan int, chOrderFromController chan src.ButtonOrder, chDirectionFromController chan int, chFinishedFromController chan bool, chGlobalOrdersToController chan src.ElevatorData, chNewNextFloorFromQueue chan int) {
+// 	go network.NetworkHandler()
+// 	ourID = <- network.ChIDFromNetwork
+// 	var InitialQueue src.ElevatorData
 
-	go queueManager(ChFloorFromController, 
-					chOrderFromController, 
-					chDirectionFromController, 
-					chFinishedFromController, 
-					chGlobalOrdersToController, 
-					chNewNextFloorFromQueue)
-}
+// 	InitialQueue.Floor = <- chFloorFromController
+// 	println("lol")
+// 	elevatorQueues[ourID] = InitialQueue
+// 	network.ChQueueReadyToBeSent <- elevatorQueues[ourID]
+
+// 	go queueManager(chFloorFromController, 
+// 					chOrderFromController, 
+// 					chDirectionFromController, 
+// 					chFinishedFromController, 
+// 					chGlobalOrdersToController, 
+// 					chNewNextFloorFromQueue)
+// }
 
 
-func queueManager(ChFloorFromController chan int, chOrderFromController chan src.ButtonOrder, chDirectionFromController chan int, chFinishedFromController chan bool, chGlobalOrdersToController chan src.ElevatorData, chNewNextFloorFromQueue chan int) {
+func queueManager(chFloorFromController chan int, chOrderFromController chan src.ButtonOrder, chDirectionFromController chan int, chFinishedFromController chan bool, chGlobalOrdersToController chan src.ElevatorData, chNewNextFloorFromQueue chan int) {
+	go network.NetworkHandler()
+	ourID = <- network.ChIDFromNetwork
+	var InitialQueue src.ElevatorData
+
+	InitialQueue.Floor = <- chFloorFromController
+	elevatorQueues[ourID] = InitialQueue
+	
+	network.ChQueueReadyToBeSent <- elevatorQueues[ourID]	
+
 	for {
 		select {
 			
@@ -172,29 +184,33 @@ func queueManager(ChFloorFromController chan int, chOrderFromController chan src
 				assignOrder(elevatorQueues, order)
 				currentOrder = calcNextOrderAndFloor(elevatorQueues[ourID])
 				chNewNextFloorFromQueue <- currentOrder.Floor
+				network.ChQueueReadyToBeSent <- elevatorQueues[ourID]
 
-			case updatedQueue := <- network.ChQueueMessage:
+			case updatedQueue := <- network.ChElevatorDataToQueue:
 				elevatorQueues[updatedQueue.SenderAddress] = updatedQueue.Data
 
-			case floor := <- ChFloorFromController:
+			case floor := <- chFloorFromController:
 				tmp := elevatorQueues[ourID]
 				tmp.Floor = floor
 				elevatorQueues[ourID] = tmp
+				network.ChQueueReadyToBeSent <- elevatorQueues[ourID]
 
 			case order := <- chOrderFromController:
-				//network.ChOrderFromQueue <- order
+				network.ChOrderFromQueue <- order
 				assignOrder(elevatorQueues, order)
 				currentOrder = calcNextOrderAndFloor(elevatorQueues[ourID])
 				chNewNextFloorFromQueue <- currentOrder.Floor
-
+				network.ChQueueReadyToBeSent <- elevatorQueues[ourID]
 
 			case <- chFinishedFromController:
 				deleteOrder(ourID, currentOrder)
+				network.ChQueueReadyToBeSent <- elevatorQueues[ourID]
 
 			case direction := <- chDirectionFromController:
 				tmp := elevatorQueues[ourID]
 				tmp.Direction = direction
 				elevatorQueues[ourID] = tmp
+				//network.ChQueueReadyToBeSent <- elevatorQueues[ourID]
 
 			// case elevator has disconnected!
 
@@ -210,19 +226,9 @@ func abs(value int) int {
 }
 
 // TODO:
-
-// * 
-// * pass our queue into merge orders when ReadyToMerge 					| OK
-// * idea: make cost-function to weight no. of stops only (less code)		|
+// * renew calcNextFloor and add functionality for DIR_STOP												|
 
 // BUGS:
-
 // * potensielt: kan to heiser gå til samme etasje, en med inn og en med opp? I så fall blir det krøll.	|
 // * Hvis vi står i 2. etg, og behandler "opp" ordre, og dermed trykker på "opp"-ordre i 1. etg, vil 
 //   heisen slette ordren i 1... Dette er fordi fnishedOrder blir sendt, og currentOrder er da i 1.		|
-//
-
-
-// TODO:
-// * renew calcNextFloor and add functionality for DIR_STOP					|
-

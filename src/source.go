@@ -16,7 +16,7 @@ type ButtonOrder struct{
 }
 
 type ElevatorData struct {
-	ID 				int
+	//ID 				int
 	Floor 			int
 	Direction 		int
 	OutsideOrders [N_FLOORS][2]int
