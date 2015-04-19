@@ -25,12 +25,12 @@ func InitController() {
 	chOrderFromIo 				:= make(chan src.ButtonOrder)
 	chFloorFromIo				:= make(chan int)
 
-	chFloorToQueue				:= make(chan int)
+	chFloorToQueue				:= make(chan int,2)
 	chOrderToQueue 				:= make(chan src.ButtonOrder, 10)
 	chDirectionToQueue			:= make(chan int, 10)
-	chOrderFinishedToQueue 		:= make(chan bool)
-	chAllOrdersFromQueue 		:= make(chan src.ElevatorData)
-	chDestinationFloorFromQueue	:= make(chan int)
+	chOrderFinishedToQueue 		:= make(chan bool,2)
+	chAllOrdersFromQueue 		:= make(chan src.ElevatorData,2)
+	chDestinationFloorFromQueue	:= make(chan int,2)
 	
 	chStartTimer 				:= make(chan bool)
 	chTimeOut					:= make(chan bool)
@@ -151,7 +151,7 @@ func doorTimer(chStartTimer chan bool, chTimeOut chan bool){
 	
 	for{
 		<-chStartTimer
-		time.Sleep(3*time.Second)
+		time.Sleep(1*time.Second)
 		chTimeOut <- true		
 	}
 }
