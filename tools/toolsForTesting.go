@@ -42,7 +42,7 @@ func PrintQueueArray(queueData []src.ElevatorData) {
 
 // TESTED:
 func BroadcastElevatorData() {
-	host := "129.241.187.255:20019"
+	host := "192.168.0.255:20019"
 	addr,_ := net.ResolveUDPAddr("udp",host)
 	conn, _ := net.DialUDP("udp",nil,addr)
 	var data src.ElevatorData
@@ -54,8 +54,8 @@ func BroadcastElevatorData() {
 
 	for {
 		time.Sleep(time.Second)
-		conn.Write(network.Pack(data))
-		println("Wrote data!")
+		conn.Write(network.PackQueue(data))
+		println("Wrote data with n = !", len(network.PackQueue(data)))
 	}
 }
 
@@ -78,7 +78,7 @@ func ListenForData() {
 			return
 		}
 				
-		PrintQueue(network.Unpack(buffer[:lengthOfMessage]))
+		PrintQueue(network.UnpackQueue(buffer[:lengthOfMessage]))
 	}
 }
 

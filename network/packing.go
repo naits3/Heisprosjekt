@@ -6,13 +6,24 @@ import (
 )
 
 
-func Pack(unpackedMessage src.ElevatorData) []byte {
+func PackQueue(unpackedMessage src.ElevatorData) []byte {
 	packedMessage,_ := json.Marshal(unpackedMessage)
 	return packedMessage
 }
 
-func Unpack(packedMessage []byte) src.ElevatorData {
+func UnpackQueue(packedMessage []byte) src.ElevatorData {
 	var unpackedMessage src.ElevatorData
+	json.Unmarshal(packedMessage, &unpackedMessage)
+	return unpackedMessage
+}
+
+func PackOrder(unpackedMessage src.ButtonOrder) []byte {
+	packedMessage, _ := json.Marshal(unpackedMessage)
+	return packedMessage
+}
+
+func UnpackOrder(packedMessage []byte) src.ButtonOrder {
+	var unpackedMessage src.ButtonOrder
 	json.Unmarshal(packedMessage, &unpackedMessage)
 	return unpackedMessage
 }

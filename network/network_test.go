@@ -24,14 +24,14 @@ func TestBroadcastConn(t *testing.T){
 
 
 func TestListenPing(t *testing.T) {
-	chNetworkMessage := make(chan networkMessage)
+	chNetworkMessage := make(chan message)
 	
 	go listenPing(chNetworkMessage)
 
 	for {
 		select {
 			case data := <- chNetworkMessage:
-				println("Got data from: ",data.address)
+				println("Got data from: ", data.senderAddress)
 
 			default:
 				time.Sleep(10*time.Millisecond)
@@ -59,4 +59,8 @@ func TestNetworkHandler(t *testing.T) {
 	// 	println(key+":", value)
 	// 	//delete(test, key)
 	// }
+}
+
+func TestPacking(t *testing.T) {
+	
 }

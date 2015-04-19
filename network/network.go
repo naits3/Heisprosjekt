@@ -16,14 +16,22 @@ var timeoutLimit time.Duration = 1*time.Second
 var sendMessageInterval time.Duration = 200*time.Millisecond
 
 type message struct {
-	senderAddress string
-	data []byte
+	senderAddress 	string
+	data 			[]byte
+}
+
+type QueueMessage struct {
+	SenderAddress 	string
+	Data 			src.ElevatorData
 }
 
 
-var ChElevatorDataToQueue = make(chan src.ElevatorData)
-var ChReadyToMerge = make(chan bool)
-var ChQueueReadyToBeSent = make(chan src.ElevatorData)
+var ChElevatorDataToQueue 	= make(chan src.ElevatorData)
+var ChOrderToQueue 			= make(chan src.ButtonOrder)
+var ChQueueMessage			= make(chan QueueMessage)
+var ChReadyToMerge 			= make(chan bool)
+var ChQueueReadyToBeSent 	= make(chan src.ElevatorData)
+var ChOrderFromQueue		= make(chan src.ButtonOrder)
 
 
 func sendPing(broadcastConn *net.UDPConn, chOutgoingData chan src.ElevatorData){
@@ -35,7 +43,7 @@ func sendPing(broadcastConn *net.UDPConn, chOutgoingData chan src.ElevatorData){
 				dataToSend = outgoingData
 
 			default:
-				broadcastConn.Write(Pack(dataToSend))
+				broadcastConn.Write(PackQueue(dataToSend))
 				time.Sleep(sendMessageInterval)
 		}
 	}
@@ -63,8 +71,9 @@ func listenPing(chReceivedMessage chan message){
 
 		IPaddressAndPortArray := strings.Split(IPaddressAndPort.String(),":")
 		IPaddress := IPaddressAndPortArray[0]
-				
+		
 		chReceivedMessage <- message{ IPaddress, buffer[:lengthOfMessage] }
+		println("received data, n= ", lengthOfMessage)
 	}
 }
 
@@ -86,7 +95,7 @@ func createBroadcastConn() *net.UDPConn{
 
 
 func GetIPAddress() string {
-
+	return "192.168.0.102"
 	addrs, err := net.InterfaceAddrs()
     if err != nil {
     	println(err)
@@ -129,7 +138,7 @@ func NetworkHandler() {
 	for { 
 		select {
 			case receivedMessage := <- chReceivedData:
-				
+				// Have to distinct between ping and orders
 				alreadyReceived := false
 				for storedAddress, status := range connectedElevators {
 					if receivedMessage.senderAddress == storedAddress && status == true {
@@ -142,7 +151,9 @@ func NetworkHandler() {
 				}
 
 				connectedElevators[receivedMessage.senderAddress] = true
-				ChElevatorDataToQueue <- Unpack(receivedMessage.data)
+
+				ChElevatorDataToQueue <- UnpackQueue(receivedMessage.data)
+				
 
 			case outGoingData := <- ChQueueReadyToBeSent:
 				chSendData <- outGoingData
@@ -160,6 +171,8 @@ func NetworkHandler() {
 		}
 	}
 }
+
+
 
 // TODO:
 
