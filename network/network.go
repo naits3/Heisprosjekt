@@ -31,6 +31,7 @@ var ChOrderToQueue 			= make(chan src.ButtonOrder)
 var ChIDFromNetwork			= make(chan string)
 var ChQueueReadyToBeSent 	= make(chan src.ElevatorData, 2)
 var ChOrderFromQueue		= make(chan src.ButtonOrder, 2)
+var ChLostElevator			= make(chan string)
 
 
 func sendPing(broadcastConn *net.UDPConn, chOutgoingData chan src.ElevatorData){
@@ -175,6 +176,8 @@ func NetworkHandler() {
 							connectedElevators[address] = false
 						case false:
 							delete(connectedElevators, address)
+							ChLostElevator <- address
+
 					}
 				}
 		}

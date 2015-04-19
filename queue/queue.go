@@ -222,8 +222,20 @@ func queueManager(chFloorFromController chan int, chOrderFromController chan src
 				elevatorQueues[ourID] = tmp
 				//network.ChQueueReadyToBeSent <- elevatorQueues[ourID]
 
-			// case elevator has disconnected!
+			case elevator := <- network.ChLostElevator:
+				dataToDistrubute := elevatorQueues[elevator]
+				delete(elevatorQueues, elevator)
+				
+				for floor := 0; floor < src.N_FLOORS; floor ++ {
+					for direction := 0; direction < 2; direction ++ {
+						if (dataToDistrubute.OutsideOrders[floor][direction] == src.ORDER) {
+							assignOrder(elevatorQueues, src.ButtonOrder{floor, direction})
+						}
+					}
+				}
 
+				network.ChQueueReadyToBeSent <- elevatorQueues[ourID]
+				
 			default:
 				time.Sleep(100*time.Millisecond)
 		}
