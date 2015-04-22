@@ -315,6 +315,8 @@ func abs(value int) int {
 // TODO:
 // * renew calcNextFloor and add functionality for DIR_STOP(behøver vi egentlig det?)
 
+
+
 // BUGS:
 // * Hvis vi står i 2. etg, og behandler "ned" ordre, og dermed trykker på "ned"-ordre i 3. etg, vil 
 //   heisen slette ordren i 3... Dette er fordi calcNextFloor tror vi står i idle, og beregner basert 
@@ -327,4 +329,7 @@ func abs(value int) int {
 //   får en ny bestilling i 3, vil den TRO at det står i 3. og sier at den skal ta denne. Men den skal 
 //   jo ta bestillingen i 2. (Ikke 1.pri å fikse)
 
-// * Heisen mottar bestillinger over nettet, men det er ikke alltid at den tar bestillingen.
+// * Heisen mottar bestillinger over nettet, men det er ikke alltid at den tar bestillingen.			|
+
+// * En heis er i IDLE, men den andre heisen ser at den er DIR_DOWN. 
+

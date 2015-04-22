@@ -170,7 +170,6 @@ func NetworkHandler() {
 
 			case <- chVerifyConnectedElevators:
 				for address, status := range connectedElevators{
-					println(address)
 					switch status {
 						case true:
 							connectedElevators[address] = false
@@ -188,3 +187,6 @@ func NetworkHandler() {
 
 // TODO:
 
+// * Slå seg av dersom den ikke får laget connections?
+
+// * Lag en generell meldingsstruct. 
