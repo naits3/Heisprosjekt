@@ -25,7 +25,7 @@ var ourID			string
 var globalOrders    src.ElevatorData
 var currentOrder	src.ButtonOrder
 var elevatorQueues	= make(map[string] src.ElevatorData)
-var timeoutLimit time.Duration = 1*time.Second
+var timeoutLimit time.Duration = 100*time.Millisecond
 var queueDirection	int
 
 
