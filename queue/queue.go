@@ -15,6 +15,12 @@ const (
 	DELETE_ORDER = -1
 )
 
+const (
+	COST_FOR_ORDER = 2
+	COST_FOR_MOVEMENT = 1
+
+)
+
 var ourID			string
 var globalOrders    src.ElevatorData
 var currentOrder	src.ButtonOrder
@@ -65,7 +71,21 @@ func assignOrder(elevatorQueues map[string] src.ElevatorData, order src.ButtonOr
 
 
 func calcOrderCost(elevator src.ElevatorData, order src.ButtonOrder) int {
-	return abs(elevator.Floor - order.Floor)
+	cost := 0
+	for floor := 0; floor < src.N_FLOORS; floor ++ {
+		for direction := 0; direction < 2; direction ++ {
+			if (elevator.OutsideOrders[floor][direction] == ORDER) {
+				cost += COST_FOR_ORDER
+			}
+
+			if (elevator.InsideOrders[floor] == ORDER) {
+				cost += COST_FOR_ORDER
+			}
+		}
+	}
+
+	cost+= COST_FOR_MOVEMENT * abs(elevator.Floor - order.Floor)
+	return cost 
 }
 
 // TO BE EDITED!
@@ -220,9 +240,13 @@ func QueueManager(chFloorFromController chan int, chOrderFromController chan src
 				globalOrders = mergeOrders(elevatorQueues)
 				chGlobalOrdersToController <- globalOrders
 				println(" ---- ORDERS ------")
-				tools.PrintQueue(elevatorQueues[ourID])
+				for id, queues := range elevatorQueues {
+					println(id)
+					tools.PrintQueue(queues)
+				}
 
 			case order := <- network.ChOrderToQueue:
+				println("Got order from NETwork!")
 				assignOrder(elevatorQueues, order)
 				currentOrder = calcNextOrderAndFloor(elevatorQueues[ourID])
 				if currentOrder.Floor != -1 {chDestinationFloorToController <- currentOrder.Floor}
@@ -302,3 +326,5 @@ func abs(value int) int {
 // * Dersom heiser står i 3., og får en bestilling i 1. går den ned. Når den er mellom 3. og 2., og den 
 //   får en ny bestilling i 3, vil den TRO at det står i 3. og sier at den skal ta denne. Men den skal 
 //   jo ta bestillingen i 2. (Ikke 1.pri å fikse)
+
+// * Heisen mottar bestillinger over nettet, men det er ikke alltid at den tar bestillingen.

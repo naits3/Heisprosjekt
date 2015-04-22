@@ -3,7 +3,7 @@
 #
 #
 
-GOPATH=$HOME/Documents/Go
+export GOPATH=$HOME/Documents/Go
 git config --global user.email "martiskj@stud.ntnu.no"
 git config --global user.name "martiskj"
 
