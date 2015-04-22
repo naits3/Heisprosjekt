@@ -8,7 +8,7 @@ import (
 	"Heisprosjekt/src"
 )
 
-const PORT = "20019"	
+const PORT = "20013"	
 var IP string
 var connectedElevators = make(map[string]bool)
 
@@ -99,7 +99,6 @@ func sendOrder(broadcastConn *net.UDPConn, message []byte) {
 
 
 func GetIPAddress() string {
-	//return "192.168.0.102"
 	addrs, err := net.InterfaceAddrs()
     if err != nil {
     	println(err)
@@ -171,6 +170,7 @@ func NetworkHandler() {
 
 			case <- chVerifyConnectedElevators:
 				for address, status := range connectedElevators{
+					println(address)
 					switch status {
 						case true:
 							connectedElevators[address] = false
@@ -188,5 +188,3 @@ func NetworkHandler() {
 
 // TODO:
 
-// Make an initNetwork
-// Make the channels lokal (remove globals ... )

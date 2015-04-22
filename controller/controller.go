@@ -27,7 +27,7 @@ func InitController() {
 
 	chFloorToQueue				:= make(chan int,2)
 	chOrderToQueue 				:= make(chan src.ButtonOrder, 10)
-	chDirectionToQueue			:= make(chan int, 10)
+	//chDirectionToQueue			:= make(chan int, 10)
 	chOrderFinishedToQueue 		:= make(chan bool,2)
 	chAllOrdersFromQueue 		:= make(chan src.ElevatorData,2)
 	chDestinationFloorFromQueue	:= make(chan int,2)
@@ -42,13 +42,13 @@ func InitController() {
 	state 			= IDLE
 	isOrderFinished = true
 	
-	go queue.QueueManager(chFloorToQueue, chOrderToQueue, chDirectionToQueue, chOrderFinishedToQueue, 
+	go queue.QueueManager(chFloorToQueue, chOrderToQueue, chOrderFinishedToQueue, 
 					chAllOrdersFromQueue, chDestinationFloorFromQueue)
 
 	chFloorToQueue <- currentFloor
 
 	go controllerManager(chCommandToIo, chOrderFromIo, chFloorFromIo, chFloorToQueue, 
-						 chOrderToQueue, chDirectionToQueue, chOrderFinishedToQueue, 
+						 chOrderToQueue, chOrderFinishedToQueue, 
 						 chAllOrdersFromQueue, chDestinationFloorFromQueue,chStartTimer,chTimeOut)
 	
 	go doorTimer(chStartTimer, chTimeOut)
@@ -59,7 +59,6 @@ func controllerManager( chCommandToIo chan io.Command,
 					 	chFloorFromIo chan int, 
 					 	chFloorToQueue chan int, 
 					 	chOrderToQueue chan src.ButtonOrder,
-					 	chDirectionToQueue chan int,
 					 	chOrderFinishedToQueue chan bool, 
 					 	chAllOrdersFromQueue chan src.ElevatorData,
 					 	chDestinationFloorFromQueue chan int, 
@@ -78,7 +77,7 @@ func controllerManager( chCommandToIo chan io.Command,
 					
 					case MOVING:
 						elevatorDirection := chooseElevatorDirection()
-						chDirectionToQueue 	<- elevatorDirection
+						//chDirectionToQueue 	<- elevatorDirection
 						chCommandToIo 		<- io.Command{io.SET_MOTOR_DIR,elevatorDirection,-1,src.BUTTON_NONE}
 
 						if(currentFloor == destinationFloor){
@@ -109,7 +108,7 @@ func controllerManager( chCommandToIo chan io.Command,
 					case IDLE:
 						
 						elevatorDirection := chooseElevatorDirection()
-						chDirectionToQueue <- elevatorDirection
+						//chDirectionToQueue <- elevatorDirection
 						
 						if(currentFloor == destinationFloor){
 							state = DOOR_OPEN

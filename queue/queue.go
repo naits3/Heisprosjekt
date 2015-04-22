@@ -20,6 +20,7 @@ var globalOrders    src.ElevatorData
 var currentOrder	src.ButtonOrder
 var elevatorQueues	= make(map[string] src.ElevatorData)
 var timeoutLimit time.Duration = 1*time.Second
+var queueDirection	int
 
 
 // TESTED:
@@ -70,20 +71,29 @@ func calcOrderCost(elevator src.ElevatorData, order src.ButtonOrder) int {
 // TO BE EDITED!
 func calcNextOrderAndFloor(queueMatrix src.ElevatorData) src.ButtonOrder {
 	currentOrder := src.ButtonOrder{-1, src.BUTTON_NONE}
+	tmp := elevatorQueues[ourID]
 
-	switch queueMatrix.Direction {
+	switch elevatorQueues[ourID].Direction {
 		case src.DIR_UP, src.DIR_STOP:
 			
-			for floor := queueMatrix.Floor; floor < src.N_FLOORS; floor ++ {
+			for floor := queueMatrix.Floor; floor < src.N_FLOORS - 1; floor ++ {
 				if (queueMatrix.OutsideOrders[floor][src.BUTTON_UP] == ORDER || queueMatrix.InsideOrders[floor] == ORDER) {
 					currentOrder = src.ButtonOrder{floor, src.BUTTON_UP}
+					tmp.Direction = src.DIR_UP
+					elevatorQueues[ourID] = tmp
 					return currentOrder
 				}
 			}
 
-			for floor := src.N_FLOORS - 1; floor >= 0; floor -- {
+			for floor := src.N_FLOORS - 1; floor > 0; floor -- {
 				if (queueMatrix.OutsideOrders[floor][src.BUTTON_DOWN] == ORDER || queueMatrix.InsideOrders[floor] == ORDER) {
 					currentOrder = src.ButtonOrder{floor, src.BUTTON_DOWN}
+					if (floor < elevatorQueues[ourID].Floor) {
+						tmp.Direction = src.DIR_DOWN
+					} else {
+						tmp.Direction = src.DIR_UP
+					}
+					elevatorQueues[ourID] = tmp
 					return currentOrder
 				}
 			}
@@ -91,22 +101,32 @@ func calcNextOrderAndFloor(queueMatrix src.ElevatorData) src.ButtonOrder {
 			for floor := 0; floor < queueMatrix.Floor; floor ++ {
 				if (queueMatrix.OutsideOrders[floor][src.BUTTON_UP] == ORDER || queueMatrix.InsideOrders[floor] == ORDER) {
 					currentOrder = src.ButtonOrder{floor, src.BUTTON_UP}
+					tmp.Direction = src.DIR_DOWN
+					elevatorQueues[ourID] = tmp
 					return currentOrder
 				}
 			}
 
 		case src.DIR_DOWN:
 			
-			for floor := queueMatrix.Floor; floor >= 0; floor -- {
+			for floor := queueMatrix.Floor; floor > 0; floor -- {
 				if (queueMatrix.OutsideOrders[floor][src.BUTTON_DOWN] == ORDER || queueMatrix.InsideOrders[floor] == ORDER) {
 					currentOrder = src.ButtonOrder{floor, src.BUTTON_DOWN}
+					tmp.Direction = src.DIR_DOWN
+					elevatorQueues[ourID] = tmp
 					return currentOrder
 				}
 			}
 
-			for floor := 0; floor < src.N_FLOORS; floor ++ {
+			for floor := 0; floor < src.N_FLOORS - 1; floor ++ {
 				if (queueMatrix.OutsideOrders[floor][src.BUTTON_UP] == ORDER || queueMatrix.InsideOrders[floor] == ORDER) {
 					currentOrder = src.ButtonOrder{floor, src.BUTTON_UP}
+					if (floor > elevatorQueues[ourID].Floor) {
+						tmp.Direction = src.DIR_UP
+					} else {
+						tmp.Direction = src.DIR_DOWN
+					}
+					elevatorQueues[ourID] = tmp
 					return currentOrder
 				}
 			}
@@ -114,13 +134,17 @@ func calcNextOrderAndFloor(queueMatrix src.ElevatorData) src.ButtonOrder {
 			for floor := src.N_FLOORS - 1; floor > queueMatrix.Floor; floor -- {
 				if (queueMatrix.OutsideOrders[floor][src.BUTTON_DOWN] == ORDER || queueMatrix.InsideOrders[floor] == ORDER) {
 					currentOrder = src.ButtonOrder{floor, src.BUTTON_DOWN}
+					tmp.Direction = src.DIR_UP
+					elevatorQueues[ourID] = tmp
 					return currentOrder
 				}
 			}
-
 		default:
 			return currentOrder
 	}
+
+	tmp.Direction = src.DIR_STOP
+	elevatorQueues[ourID] = tmp
 	return currentOrder
 }
 
@@ -176,7 +200,7 @@ func timer(timeout chan bool) {
 	}
 }
 
-func QueueManager(chFloorFromController chan int, chOrderFromController chan src.ButtonOrder, chDirectionFromController chan int, chFinishedFromController chan bool, chGlobalOrdersToController chan src.ElevatorData, chDestinationFloorToController chan int) {
+func QueueManager(chFloorFromController chan int, chOrderFromController chan src.ButtonOrder, chFinishedFromController chan bool, chGlobalOrdersToController chan src.ElevatorData, chDestinationFloorToController chan int) {
 	var chUpdateGlobalOrders = make(chan bool)
 
 	go network.NetworkHandler()
@@ -214,12 +238,14 @@ func QueueManager(chFloorFromController chan int, chOrderFromController chan src
 				network.ChQueueReadyToBeSent <- elevatorQueues[ourID]
 
 			case order := <- chOrderFromController:
-				network.ChOrderFromQueue <- order
-				assignOrder(elevatorQueues, order)
+				if (order.ButtonType != src.BUTTON_INSIDE){
+					network.ChOrderFromQueue <- order
+					assignOrder(elevatorQueues, order)
+				} else {
+					addOrder(ourID, order)
+				}
 				currentOrder = calcNextOrderAndFloor(elevatorQueues[ourID])
-				println("sending nextfloor to C")
 				if currentOrder.Floor != -1 {chDestinationFloorToController <- currentOrder.Floor}
-				println("... sent!")
 				network.ChQueueReadyToBeSent <- elevatorQueues[ourID]
 
 			case <- chFinishedFromController:
@@ -228,11 +254,12 @@ func QueueManager(chFloorFromController chan int, chOrderFromController chan src
 				currentOrder = calcNextOrderAndFloor(elevatorQueues[ourID])
 				if currentOrder.Floor != -1 {chDestinationFloorToController <- currentOrder.Floor}
 
-			case direction := <- chDirectionFromController:
-				tmp := elevatorQueues[ourID]
-				tmp.Direction = direction
-				elevatorQueues[ourID] = tmp
-				network.ChQueueReadyToBeSent <- elevatorQueues[ourID]
+			//case direction := <- chDirectionFromController:
+			//	println("Q: direction = ",direction)
+			//	tmp := elevatorQueues[ourID]
+			//	tmp.Direction = direction
+			//	elevatorQueues[ourID] = tmp
+			//	network.ChQueueReadyToBeSent <- elevatorQueues[ourID]
 
 			case elevator := <- network.ChLostElevator:
 				dataToDistrubute := elevatorQueues[elevator]
@@ -262,9 +289,16 @@ func abs(value int) int {
 }
 
 // TODO:
-// * renew calcNextFloor and add functionality for DIR_STOP												|
+// * renew calcNextFloor and add functionality for DIR_STOP(behøver vi egentlig det?)
 
 // BUGS:
-// * potensielt: kan to heiser gå til samme etasje, en med inn og en med opp? I så fall blir det krøll.	|
-// * Hvis vi står i 2. etg, og behandler "opp" ordre, og dermed trykker på "opp"-ordre i 1. etg, vil 
-//   heisen slette ordren i 1... Dette er fordi fnishedOrder blir sendt, og currentOrder er da i 1.		|
+// * Hvis vi står i 2. etg, og behandler "ned" ordre, og dermed trykker på "ned"-ordre i 3. etg, vil 
+//   heisen slette ordren i 3... Dette er fordi calcNextFloor tror vi står i idle, og beregner basert 
+//   på at vi er på vei opp																				| FIXED
+
+// * Heisen tar alle opp- og ned- etasjer når den går ovenfra og nedover. Dette er fordi calc cost 
+//   beregner likt for opp og idle, og når en heis står i en etasje er den i idle. 						| FIXED
+
+// * Dersom heiser står i 3., og får en bestilling i 1. går den ned. Når den er mellom 3. og 2., og den 
+//   får en ny bestilling i 3, vil den TRO at det står i 3. og sier at den skal ta denne. Men den skal 
+//   jo ta bestillingen i 2. (Ikke 1.pri å fikse)
