@@ -123,8 +123,8 @@ func controllerManager( chCommandToIo chan io.Command,
 					case MOVING:
 						isOrderFinished = false
 
-					default:
-						time.Sleep(10*time.Millisecond)
+					// default:
+					// 	time.Sleep(10*time.Millisecond)
 				}							
 		}
 	}

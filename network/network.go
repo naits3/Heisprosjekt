@@ -75,7 +75,7 @@ func listenPing(chReceivedMessage chan message){
 		IPaddress := IPaddressAndPortArray[0]
 		
 		chReceivedMessage <- message{ IPaddress, buffer[:lengthOfMessage] }
-		time.Sleep(10*time.Millisecond)
+		//time.Sleep(10*time.Millisecond)
 	}
 }
 
@@ -183,9 +183,9 @@ func NetworkHandler() {
 
 					}
 				}
-				
-			default:
-				time.Sleep(10*time.Millisecond)
+
+			// default:
+			// 	time.Sleep(10*time.Millisecond)
 		}
 	}
 	
