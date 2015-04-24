@@ -101,7 +101,7 @@ func pollOrder(chOrder chan src.ButtonOrder){
 			}
 			
 		}
-		time.Sleep(40*time.Millisecond)
+		time.Sleep(10*time.Millisecond)
 	}
 }
 
