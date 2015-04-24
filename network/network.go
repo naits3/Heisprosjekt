@@ -75,6 +75,7 @@ func listenPing(chReceivedMessage chan message){
 		IPaddress := IPaddressAndPortArray[0]
 		
 		chReceivedMessage <- message{ IPaddress, buffer[:lengthOfMessage] }
+		time.Sleep(10*time.Millisecond)
 	}
 }
 
@@ -150,6 +151,7 @@ func NetworkHandler() {
 			
 			case receivedMessage := <- chReceivedData:
 				if (receivedMessage.senderAddress == IP) {
+					//tools.PrintQueue(UnpackQueue(receivedMessage.data))
 					break
 				}
 
