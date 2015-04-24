@@ -17,6 +17,7 @@ var sendMessageInterval time.Duration = 200*time.Millisecond
 
 type message struct {
 	senderAddress 	string
+	messageType 	string
 	data 			[]byte
 }
 
@@ -35,7 +36,7 @@ var ChLostElevator			= make(chan string)
 
 
 func sendPing(broadcastConn *net.UDPConn, chOutgoingData chan src.ElevatorData){
-	dataToSend := <- chOutgoingData		
+	dataToSend := <- chOutgoingData
 	
 	for {
 		select {
@@ -43,7 +44,9 @@ func sendPing(broadcastConn *net.UDPConn, chOutgoingData chan src.ElevatorData){
 				dataToSend = outgoingData
 
 			default:
-				broadcastConn.Write(PackQueue(dataToSend))
+				UnpackedMessage := message{IP, "elevatorData", PackQueue(dataToSend)}
+				packedMessage := PackMessage(UnpackedMessage)
+				broadcastConn.Write(packedMessage)
 				time.Sleep(sendMessageInterval)
 		}
 	}
@@ -63,16 +66,18 @@ func listenPing(chReceivedMessage chan message){
 
 	defer conn.Close()
 	for {
-		lengthOfMessage, IPaddressAndPort, err := conn.ReadFromUDP(buffer)
+		//lengthOfMessage, IPaddressAndPort, err := conn.ReadFromUDP(buffer)
+		lengthOfMessage, _, err := conn.ReadFromUDP(buffer)
 		if err != nil {
 			print(err)
 			return
 		}
 
-		IPaddressAndPortArray := strings.Split(IPaddressAndPort.String(),":")
-		IPaddress := IPaddressAndPortArray[0]
+		//IPaddressAndPortArray := strings.Split(IPaddressAndPort.String(),":")
+		//IPaddress := IPaddressAndPortArray[0]
 		
-		chReceivedMessage <- message{ IPaddress, buffer[:lengthOfMessage] }
+		//chReceivedMessage <- message{ IPaddress, buffer[:lengthOfMessage] }
+		chReceivedMessage <- UnpackMessage(buffer[:lengthOfMessage])
 	}
 }
 
@@ -152,21 +157,22 @@ func NetworkHandler() {
 				}
 
 				connectedElevators[receivedMessage.senderAddress] = true
-				// Need to find out how to receive multiple data with JSON...
-				if (len(receivedMessage.data) > 50) {
-					ChElevatorDataToQueue <- QueueMessage{receivedMessage.senderAddress, UnpackQueue(receivedMessage.data)}
+				switch receivedMessage.messageType {
+					
+					case "elevatorData":
+						ChElevatorDataToQueue <- QueueMessage{receivedMessage.senderAddress, UnpackQueue(receivedMessage.data)}
 
-				}else {
-					ChOrderToQueue <- UnpackOrder(receivedMessage.data)
+					case "order":
+						ChOrderToQueue <- UnpackOrder(receivedMessage.data)
 				}
-				
 
 			case outGoingData := <- ChQueueReadyToBeSent:
 				chSendData <- outGoingData
 
 			case order := <- ChOrderFromQueue:
-				packedOrder := PackOrder(order)
-				sendOrder(broadcastConn, packedOrder)
+				message := message{IP, "order", PackOrder(order)}
+				packedMessage := PackMessage(message)
+				sendOrder(broadcastConn, packedMessage)
 
 			case <- chVerifyConnectedElevators:
 				for address, status := range connectedElevators{
