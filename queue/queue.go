@@ -95,7 +95,7 @@ func calcOrderCost(elevator src.ElevatorData, order src.ButtonOrder) int {
 	return cost 
 }
 
-// TO BE EDITED!
+
 func calcNextOrderAndFloor(queueMatrix src.ElevatorData) src.ButtonOrder {
 	currentOrder := src.ButtonOrder{-1, src.BUTTON_NONE}
 	tmp := elevatorQueues[ourID]
@@ -265,6 +265,8 @@ func QueueManager(chFloorFromController chan int, chOrderFromController chan src
 				tmp := elevatorQueues[ourID]
 				tmp.Floor = floor
 				elevatorQueues[ourID] = tmp
+				currentOrder = calcNextOrderAndFloor(elevatorQueues[ourID])
+				if currentOrder.Floor != -1 {chDestinationFloorToController <- currentOrder.Floor}
 				network.ChQueueReadyToBeSent <- elevatorQueues[ourID]
 
 			case order := <- chOrderFromController:
@@ -307,9 +309,6 @@ func QueueManager(chFloorFromController chan int, chOrderFromController chan src
 				network.ChQueueReadyToBeSent <- elevatorQueues[ourID]
 				currentOrder = calcNextOrderAndFloor(elevatorQueues[ourID])
 				if currentOrder.Floor != -1 {chDestinationFloorToController <- currentOrder.Floor}
-
-			// default:
-			// 	time.Sleep(10*time.Millisecond)
 		}
 	}
 }

@@ -72,12 +72,12 @@ func controllerManager( chCommandToIo chan io.Command,
 
 			case currentFloor = <-chFloorFromIo:
 				 chCommandToIo  <- io.Command{io.SET_FLOOR_INDICATOR_LAMP,src.ON, currentFloor, src.BUTTON_NONE}
+				 chFloorToQueue <- currentFloor
+				 destinationFloor = <- chDestinationFloorFromQueue
 				
 				switch state{
-					
 					case MOVING:
 						elevatorDirection := chooseElevatorDirection()
-						//chDirectionToQueue 	<- elevatorDirection
 						chCommandToIo 		<- io.Command{io.SET_MOTOR_DIR,elevatorDirection,-1,src.BUTTON_NONE}
 
 						if(currentFloor == destinationFloor){
@@ -90,7 +90,7 @@ func controllerManager( chCommandToIo chan io.Command,
 						// feilhaandtering?
 						continue
 				}
-				chFloorToQueue <- currentFloor
+				
 				
 			case <- chTimeOut:
 					state = IDLE
