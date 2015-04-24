@@ -14,7 +14,7 @@ var IP string
 var connectedElevators = make(map[string]bool)
 
 var timeoutLimit time.Duration = 2*time.Second
-var sendMessageInterval time.Duration = 200*time.Millisecond
+var sendMessageInterval time.Duration = 150*time.Millisecond
 
 type message struct {
 	senderAddress 	string
