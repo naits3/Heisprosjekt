@@ -13,7 +13,7 @@ var IP string
 var connectedElevators = make(map[string]bool)
 
 var timeoutLimit time.Duration = 2*time.Second
-var sendMessageInterval time.Duration = 200*time.Millisecond
+var sendMessageInterval time.Duration = 40*time.Millisecond
 
 type message struct {
 	senderAddress 	string
@@ -170,7 +170,6 @@ func NetworkHandler() {
 
 			case <- chVerifyConnectedElevators:
 				for address, status := range connectedElevators{
-					println(address)
 					switch status {
 						case true:
 							connectedElevators[address] = false
