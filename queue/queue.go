@@ -50,7 +50,7 @@ func mergeOrders(elevatorQueues map[string] src.ElevatorData) src.ElevatorData {
 // TESTED:
 func assignOrder(elevatorQueues map[string] src.ElevatorData, order src.ButtonOrder) {
 	var minID string
-	minCost := 10000
+	minCost := 100000
 
 	for elevatorID, elevatorQueue := range elevatorQueues {
 		if (elevatorQueue.OutsideOrders[order.Floor][order.ButtonType] == src.ORDER) {
@@ -71,6 +71,7 @@ func assignOrder(elevatorQueues map[string] src.ElevatorData, order src.ButtonOr
 
 	if (minID == ourID) {
 		addOrder(ourID, order)
+		
 	}
 }
 
