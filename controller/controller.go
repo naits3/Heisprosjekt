@@ -124,7 +124,7 @@ func controllerManager( chCommandToIo chan io.Command,
 						isOrderFinished = false
 
 					default:
-						continue
+						time.Sleep(10*time.Millisecond)
 				}							
 		}
 	}

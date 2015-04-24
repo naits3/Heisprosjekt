@@ -183,6 +183,9 @@ func NetworkHandler() {
 
 					}
 				}
+				
+			default:
+				time.Sleep(10*time.Millisecond)
 		}
 	}
 	

@@ -308,7 +308,7 @@ func QueueManager(chFloorFromController chan int, chOrderFromController chan src
 				if currentOrder.Floor != -1 {chDestinationFloorToController <- currentOrder.Floor}
 
 			default:
-				time.Sleep(100*time.Millisecond)
+				time.Sleep(10*time.Millisecond)
 		}
 	}
 }
