@@ -37,7 +37,7 @@ func InitController() {
 
 
 	io.InitIo(chCommandToIo, chOrderFromIo, chFloorFromIo)
-	goDownUntilReachFloor(chCommandToIo, chFloorFromIo)	
+	goUpUntilReachFloor(chCommandToIo, chFloorFromIo)	
 	
 	state 			= IDLE
 	isOrderFinished = true
@@ -138,8 +138,8 @@ func setLights(knowOrders src.ElevatorData, chCommandToIo chan io.Command){
 	}
 }
 
-func goDownUntilReachFloor(chCommandToIo chan io.Command, chFloorFromIo chan int){
-	chCommandToIo  	<- io.Command{io.SET_MOTOR_DIR,src.DIR_DOWN,-1,src.BUTTON_NONE}
+func goUpUntilReachFloor(chCommandToIo chan io.Command, chFloorFromIo chan int){
+	chCommandToIo  	<- io.Command{io.SET_MOTOR_DIR,src.DIR_UP,-1,src.BUTTON_NONE}
 	currentFloor	= <- chFloorFromIo
 	chCommandToIo  	<- io.Command{io.SET_MOTOR_DIR,src.DIR_STOP,-1,src.BUTTON_NONE}
 	chCommandToIo  	<- io.Command{io.SET_FLOOR_INDICATOR_LAMP,src.ON,currentFloor,src.BUTTON_NONE}
