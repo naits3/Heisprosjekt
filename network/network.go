@@ -149,6 +149,10 @@ func NetworkHandler() {
 	for { 
 		select {
 			
+			case order := <- ChOrderFromQueue:
+				packedOrder := PackOrder(order)
+				sendOrder(broadcastConn, packedOrder)
+
 			case receivedMessage := <- chReceivedData:
 				if (receivedMessage.senderAddress == IP) {
 					//tools.PrintQueue(UnpackQueue(receivedMessage.data))
@@ -168,9 +172,7 @@ func NetworkHandler() {
 			case outGoingData := <- ChQueueReadyToBeSent:
 				chSendData <- outGoingData
 
-			case order := <- ChOrderFromQueue:
-				packedOrder := PackOrder(order)
-				sendOrder(broadcastConn, packedOrder)
+			
 
 			case <- chVerifyConnectedElevators:
 				for address, status := range connectedElevators{
