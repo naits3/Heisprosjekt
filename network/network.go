@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 	"Heisprosjekt/src"
-	"Heisprosjekt/tools"
+	//"Heisprosjekt/tools"
 )
 
 const PORT = "20013"	
