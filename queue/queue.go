@@ -50,9 +50,14 @@ func mergeOrders(elevatorQueues map[string] src.ElevatorData) src.ElevatorData {
 // TESTED:
 func assignOrder(elevatorQueues map[string] src.ElevatorData, order src.ButtonOrder) {
 	var minID string
-	minCost := 10000 // skulle gjerne vært inf elno..
+	minCost := 10000
 
 	for elevatorID, elevatorQueue := range elevatorQueues {
+		if (elevatorQueue.OutsideOrders[order.Floor][order.ButtonType] == src.ORDER) {
+			minID = elevatorID
+			break;
+		}
+
 		cost := calcOrderCost(elevatorQueue, order)
 		if (cost < minCost) {
 			minID = elevatorID
@@ -72,6 +77,7 @@ func assignOrder(elevatorQueues map[string] src.ElevatorData, order src.ButtonOr
 
 func calcOrderCost(elevator src.ElevatorData, order src.ButtonOrder) int {
 	cost := 0
+
 	for floor := 0; floor < src.N_FLOORS; floor ++ {
 		for direction := 0; direction < 2; direction ++ {
 			if (elevator.OutsideOrders[floor][direction] == ORDER) {
@@ -246,7 +252,6 @@ func QueueManager(chFloorFromController chan int, chOrderFromController chan src
 				}
 
 			case order := <- network.ChOrderToQueue:
-				println("Got order from NETwork!")
 				assignOrder(elevatorQueues, order)
 				currentOrder = calcNextOrderAndFloor(elevatorQueues[ourID])
 				if currentOrder.Floor != -1 {chDestinationFloorToController <- currentOrder.Floor}
@@ -262,6 +267,7 @@ func QueueManager(chFloorFromController chan int, chOrderFromController chan src
 				network.ChQueueReadyToBeSent <- elevatorQueues[ourID]
 
 			case order := <- chOrderFromController:
+				println("got order!")
 				if (order.ButtonType != src.BUTTON_INSIDE){
 					network.ChOrderFromQueue <- order
 					assignOrder(elevatorQueues, order)

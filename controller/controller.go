@@ -102,7 +102,6 @@ func controllerManager( chCommandToIo chan io.Command,
 				setLights(ordersFromQueue,chCommandToIo)
 		
 			case destinationFloor = <- chDestinationFloorFromQueue:
-				println("destinationFloor: ", destinationFloor)
 				switch state{
 					
 					case IDLE:
