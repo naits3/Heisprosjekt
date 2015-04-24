@@ -274,9 +274,9 @@ func QueueManager(chFloorFromController chan int, chOrderFromController chan src
 
 			case <- chFinishedFromController:
 				deleteOrder(ourID, currentOrder)
-				network.ChQueueReadyToBeSent <- elevatorQueues[ourID]
 				currentOrder = calcNextOrderAndFloor(elevatorQueues[ourID])
 				if currentOrder.Floor != -1 {chDestinationFloorToController <- currentOrder.Floor}
+				network.ChQueueReadyToBeSent <- elevatorQueues[ourID]
 
 			//case direction := <- chDirectionFromController:
 			//	println("Q: direction = ",direction)
