@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 	"Heisprosjekt/src"
+	"Heisprosjekt/tools"
 )
 
 const PORT = "20013"	
@@ -43,6 +44,7 @@ func sendPing(broadcastConn *net.UDPConn, chOutgoingData chan src.ElevatorData){
 				dataToSend = outgoingData
 
 			default:
+				//tools.PrintQueue(dataToSend)
 				broadcastConn.Write(PackQueue(dataToSend))
 				time.Sleep(sendMessageInterval)
 		}
