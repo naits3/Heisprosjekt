@@ -22,17 +22,17 @@ type message struct {
 
 type ElevatorMessage struct {
 	SenderAddress 	string
-	ElevatorData 			src.ElevatorData
+	ElevatorData 	src.ElevatorData
 }
 
 
-func sendPing(broadcastConn *net.UDPConn, chOutgoingData chan src.ElevatorData){
-	dataToSend := <- chOutgoingData		
+func sendElevatorData(broadcastConn *net.UDPConn, chSendElevatorData chan src.ElevatorData){
+	dataToSend := <- chSendElevatorData		
 	
 	for {
 		select {
-			case outgoingData := <- chOutgoingData:
-				dataToSend = outgoingData
+			case elevatorData := <- chSendElevatorData:
+				dataToSend = elevatorData
 
 			default:
 				broadcastConn.Write(PackQueue(dataToSend))
@@ -42,7 +42,7 @@ func sendPing(broadcastConn *net.UDPConn, chOutgoingData chan src.ElevatorData){
 }
 
 
-func listenPing(chReceivedMessage chan message){
+func listenForMessage(chReceivedMessage chan message){
 	
 	UDPAddr, _ := net.ResolveUDPAddr("udp",":"+PORT)
 	var buffer []byte = make([]byte, 1024)
@@ -126,19 +126,19 @@ func InitNetwork(	chIdentificationTQ chan string,
 
 	chVerifyConnectedElevators := make(chan bool)
 	chReceivedData := make(chan message)
-	chSendData := make(chan src.ElevatorData)
+	chSendElevatorData := make(chan src.ElevatorData)
 
 	ourIP = GetIPAddress()	
 	chIdentificationTQ <- ourIP
 	broadcastConn := createBroadcastConn()
-	go listenPing(chReceivedData)
-	go sendPing(broadcastConn, chSendData)
+	go listenForMessage(chReceivedData)
+	go sendElevatorData(broadcastConn, chSendElevatorData)
 	go timer(chVerifyConnectedElevators)
 
-	outGoingData :=  <- chElevatorDataFQ
-	chSendData <- outGoingData
+	elevatorData :=  <- chElevatorDataFQ
+	chSendElevatorData <- elevatorData
 
-	go networkManager(chIdentificationTQ, chElevatorDataTQ, chElevatorDataFQ, chOrderTQ, chOrderFQ, chDisconElevatorTQ, chVerifyConnectedElevators, chReceivedData, chSendData, broadcastConn)
+	go networkManager(chIdentificationTQ, chElevatorDataTQ, chElevatorDataFQ, chOrderTQ, chOrderFQ, chDisconElevatorTQ, chVerifyConnectedElevators, chReceivedData, chSendElevatorData, broadcastConn)
 
 }
 
@@ -151,7 +151,7 @@ func networkManager(chIdentificationTQ chan string,
 					chDisconElevatorTQ chan string,
 					chVerifyConnectedElevators chan bool,
 					chReceivedData chan message,
-					chSendData chan src.ElevatorData,
+					chSendElevatorData chan src.ElevatorData,
 					broadcastConn *net.UDPConn) {
 
 	for { 
@@ -174,10 +174,8 @@ func networkManager(chIdentificationTQ chan string,
 				}
 				
 
-			case outGoingData := <- chElevatorDataFQ:
-				chSendData <- outGoingData
-
-			
+			case elevatorData := <- chElevatorDataFQ:
+				chSendElevatorData <- elevatorData		
 
 			case <- chVerifyConnectedElevators:
 				for address, status := range connectedElevators{
