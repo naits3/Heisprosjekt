@@ -29,7 +29,7 @@ func InitController() {
 	chOrderToQueue 				:= make(chan src.ButtonOrder, 10)
 	//chDirectionToQueue			:= make(chan int, 10)
 	chOrderFinishedToQueue 		:= make(chan bool,2)
-	chAllOrdersFromQueue 		:= make(chan src.ElevatorData,2)
+	chAllOrdersFromQueue 		:= make(chan [src.N_FLOORS][3]int,2)
 	chDestinationFloorFromQueue	:= make(chan int,2)
 	
 	chStartTimer 				:= make(chan bool)
@@ -58,7 +58,7 @@ func controllerManager( chCommandToIo chan io.Command,
 					 	chFloorToQueue chan int, 
 					 	chOrderToQueue chan src.ButtonOrder,
 					 	chOrderFinishedToQueue chan bool, 
-					 	chAllOrdersFromQueue chan src.ElevatorData,
+					 	chAllOrdersFromQueue chan [src.N_FLOORS][3]int,
 					 	chDestinationFloorFromQueue chan int, 
 					 	chStartTimer chan bool, 
 					 	chTimeOut chan bool){
@@ -128,11 +128,11 @@ func controllerManager( chCommandToIo chan io.Command,
 	}
 }
 
-func setLights(knowOrders src.ElevatorData, chCommandToIo chan io.Command){
+func setLights(knowOrders [src.N_FLOORS][3]int, chCommandToIo chan io.Command){
 	for floor := 0; floor < src.N_FLOORS; floor ++ {
-		chCommandToIo <- io.Command{io.SET_BUTTON_LAMP,knowOrders.OutsideOrders[floor][src.BUTTON_UP],     floor,src.BUTTON_UP}
-		chCommandToIo <- io.Command{io.SET_BUTTON_LAMP,knowOrders.OutsideOrders[floor][src.BUTTON_DOWN],   floor,src.BUTTON_DOWN}
-		chCommandToIo <- io.Command{io.SET_BUTTON_LAMP,knowOrders.InsideOrders[floor], 					   floor,src.BUTTON_INSIDE}
+		chCommandToIo <- io.Command{io.SET_BUTTON_LAMP,knowOrders[floor][src.BUTTON_UP],     floor,src.BUTTON_UP}
+		chCommandToIo <- io.Command{io.SET_BUTTON_LAMP,knowOrders[floor][src.BUTTON_DOWN],   floor,src.BUTTON_DOWN}
+		chCommandToIo <- io.Command{io.SET_BUTTON_LAMP,knowOrders[floor][src.BUTTON_INSIDE], floor,src.BUTTON_INSIDE}
 	}
 }
 

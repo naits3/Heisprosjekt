@@ -15,24 +15,23 @@ const (
 )
 
 var ourID			string
-var buttonLights    src.ElevatorData
 var currentOrder	src.ButtonOrder
 var elevatorQueues 	= make(map[string] src.ElevatorData)
 var timeoutLimit time.Duration = 100*time.Millisecond
 
-func determineButtonLights(elevatorQueues map[string] src.ElevatorData) src.ElevatorData {	
-	var buttonLights src.ElevatorData
+func determineButtonLights(elevatorQueues map[string] src.ElevatorData) [src.N_FLOORS][3]int {	
+	var buttonLights [src.N_FLOORS][3]int
 	for floor := 0; floor < src.N_FLOORS; floor ++ {
-		for direction := 0; direction < 2; direction ++ {
+		for buttonType := 0; buttonType < 2; buttonType ++ {
 			for _, elevatorQueue := range elevatorQueues {
-				if (elevatorQueue.OutsideOrders[floor][direction] == src.ORDER) {
-					buttonLights.OutsideOrders[floor][direction] = src.ORDER
+				if (elevatorQueue.OutsideOrders[floor][buttonType] == src.ORDER) {
+					buttonLights[floor][buttonType] = src.ORDER
 				}
 			}
 		}
-	}
 
-	buttonLights.InsideOrders = elevatorQueues[ourID].InsideOrders
+		buttonLights[floor][2] = elevatorQueues[ourID].InsideOrders[floor]		
+	}
 	return buttonLights
 }
 
@@ -212,7 +211,7 @@ func commandPrint() {
 }
 
 
-func InitQueue(chFloorFromController chan int, chOrderFromController chan src.ButtonOrder, chFinishedFromController chan bool, chGlobalOrdersToController chan src.ElevatorData, chDestinationFloorToController chan int) {
+func InitQueue(chFloorFromController chan int, chOrderFromController chan src.ButtonOrder, chFinishedFromController chan bool, chGlobalOrdersToController chan [src.N_FLOORS][3]int, chDestinationFloorToController chan int) {
 	var chUpdateGlobalOrders = make(chan bool)
  	go network.NetworkHandler()
 	ourID = <- network.ChIDFromNetwork
@@ -226,7 +225,7 @@ func InitQueue(chFloorFromController chan int, chOrderFromController chan src.Bu
 func queueManager(	chFloorFromController chan int,
 					chOrderFromController chan src.ButtonOrder,
 					chFinishedFromController chan bool,
-					chGlobalOrdersToController chan src.ElevatorData,
+					chGlobalOrdersToController chan [src.N_FLOORS][3]int,
 					chDestinationFloorToController chan int,
 					chUpdateGlobalOrders chan bool,
 					InitialQueue src.ElevatorData) {	
@@ -240,7 +239,7 @@ func queueManager(	chFloorFromController chan int,
 		select {
 			
 			case <- chUpdateGlobalOrders:
-				buttonLights = determineButtonLights(elevatorQueues)
+				buttonLights := determineButtonLights(elevatorQueues)
 				chGlobalOrdersToController <- buttonLights
 				commandPrint()
 
