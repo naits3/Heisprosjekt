@@ -26,14 +26,6 @@ type ElevatorMessage struct {
 }
 
 
-var ChElevatorDataToQueue 	= make(chan ElevatorMessage)
-var ChOrderToQueue 			= make(chan src.ButtonOrder)
-var ChIDFromNetwork			= make(chan string)
-var ChQueueReadyToBeSent 	= make(chan src.ElevatorData, 2)
-var ChOrderFromQueue		= make(chan src.ButtonOrder, 2)
-var ChLostElevator			= make(chan string)
-
-
 func sendPing(broadcastConn *net.UDPConn, chOutgoingData chan src.ElevatorData){
 	dataToSend := <- chOutgoingData		
 	
@@ -125,27 +117,47 @@ func timer(timeout chan bool) {
 	}
 }
 
+func InitNetwork(	chIdentificationTQ chan string,
+					chElevatorDataTQ chan ElevatorMessage,
+					chElevatorDataFQ chan src.ElevatorData,
+					chOrderTQ chan src.ButtonOrder,
+					chOrderFQ chan src.ButtonOrder,
+					chDisconElevatorTQ chan string) {
 
-func NetworkHandler() {
 	chVerifyConnectedElevators := make(chan bool)
 	chReceivedData := make(chan message)
 	chSendData := make(chan src.ElevatorData)
 
 	IP = GetIPAddress()	
-	ChIDFromNetwork <- IP
+	chIdentificationTQ <- IP
 	broadcastConn := createBroadcastConn()
-
 	go listenPing(chReceivedData)
 	go sendPing(broadcastConn, chSendData)
 	go timer(chVerifyConnectedElevators)
 
-	outGoingData :=  <- ChQueueReadyToBeSent
+	outGoingData :=  <- chElevatorDataFQ
 	chSendData <- outGoingData
+
+	go networkManager(chIdentificationTQ, chElevatorDataTQ, chElevatorDataFQ, chOrderTQ, chOrderFQ, chDisconElevatorTQ, chVerifyConnectedElevators, chReceivedData, chSendData, broadcastConn)
+
+}
+
+
+func networkManager(chIdentificationTQ chan string,
+					chElevatorDataTQ chan ElevatorMessage,
+					chElevatorDataFQ chan src.ElevatorData,
+					chOrderTQ chan src.ButtonOrder,
+					chOrderFQ chan src.ButtonOrder,
+					chDisconElevatorTQ chan string,
+					chVerifyConnectedElevators chan bool,
+					chReceivedData chan message,
+					chSendData chan src.ElevatorData,
+					broadcastConn *net.UDPConn) {
 
 	for { 
 		select {
 			
-			case order := <- ChOrderFromQueue:
+			case order := <- chOrderFQ:
 				packedOrder := PackOrder(order)
 				sendOrder(broadcastConn, packedOrder)
 
@@ -156,14 +168,14 @@ func NetworkHandler() {
 
 				connectedElevators[receivedMessage.senderAddress] = true
 				if (len(receivedMessage.data) > 50) {
-					ChElevatorDataToQueue <- ElevatorMessage{receivedMessage.senderAddress, UnpackQueue(receivedMessage.data)}
+					chElevatorDataTQ <- ElevatorMessage{receivedMessage.senderAddress, UnpackQueue(receivedMessage.data)}
 
 				}else {
-					ChOrderToQueue <- UnpackOrder(receivedMessage.data)
+					chOrderTQ <- UnpackOrder(receivedMessage.data)
 				}
 				
 
-			case outGoingData := <- ChQueueReadyToBeSent:
+			case outGoingData := <- chElevatorDataFQ:
 				chSendData <- outGoingData
 
 			
@@ -175,7 +187,7 @@ func NetworkHandler() {
 							connectedElevators[address] = false
 						case false:
 							delete(connectedElevators, address)
-							ChLostElevator <- address
+							chDisconElevatorTQ <- address
 
 					}
 				}

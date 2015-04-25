@@ -238,27 +238,41 @@ func commandPrint() {
 
 func InitQueue(chFloorFC chan int, chOrderFC chan src.ButtonOrder, chOrderFinishedFC chan bool, chButtonLightsTC chan [src.N_FLOORS][3]int, chDestinationFloorTC chan int) {
 	var chUpdateLights = make(chan bool)
-	//var chIdentificationFN = make(chan string)
-	//var chElevatorDataFN = make(chan network.ElevatorMessage)
-	//var chElevatorDataTN = make(chan src.ElevatorData)
-	//var chOrderFN = make(chan src.Order)
-	//var chOrderTN = make(chan src.Order)
-	//var chDisconElevatorFN = make(chan string)
+	var chIdentificationFN = make(chan string)
+	var chElevatorDataFN = make(chan network.ElevatorMessage)
+	var chElevatorDataTN = make(chan src.ElevatorData, 2)
+	var chOrderFN = make(chan src.ButtonOrder)
+	var chOrderTN = make(chan src.ButtonOrder, 2)
+	var chDisconElevatorFN = make(chan string)
 
- 	go network.NetworkHandler()
-	ourID = <- network.ChIDFromNetwork
+ 	go network.InitNetwork(chIdentificationFN, chElevatorDataFN, chElevatorDataTN, chOrderFN, chOrderTN, chDisconElevatorFN)
+
+	ourID = <- chIdentificationFN
  	var InitialElevatorData src.ElevatorData
 
- 	go queueManager(chFloorFC, chOrderFC, chOrderFinishedFC, chButtonLightsTC, chDestinationFloorTC, chUpdateLights,  InitialElevatorData)
+ 	InitialElevatorData.Floor = <- chFloorFC
+	allElevatorsData[ourID] = InitialElevatorData
+
+	chElevatorDataTN <- allElevatorsData[ourID]	
+	go updateLightsTimer(chUpdateLights)
+
+ 	go queueManager(chFloorFC, chOrderFC, chOrderFinishedFC, chButtonLightsTC, chDestinationFloorTC, chUpdateLights,
+ 					chIdentificationFN, chElevatorDataFN, chElevatorDataTN, chOrderFN, chOrderTN, chDisconElevatorFN)
 }
 
 
-func queueManager(chFloorFC chan int, chOrderFC chan src.ButtonOrder, chOrderFinishedFC chan bool, chButtonLightsTC chan [src.N_FLOORS][3]int, chDestinationFloorTC chan int, chUpdateLights chan bool, InitialElevatorData src.ElevatorData) {	
-	InitialElevatorData.Floor = <- chFloorFC
-	allElevatorsData[ourID] = InitialElevatorData
-	network.ChQueueReadyToBeSent <- allElevatorsData[ourID]	
-	go updateLightsTimer(chUpdateLights)
-
+func queueManager(	chFloorFC chan int,
+					chOrderFC chan src.ButtonOrder,
+					chOrderFinishedFC chan bool,
+					chButtonLightsTC chan [src.N_FLOORS][3]int,
+					chDestinationFloorTC chan int,
+					chUpdateLights chan bool,
+					chIdentificationFN chan string,
+					chElevatorDataFN chan network.ElevatorMessage,
+					chElevatorDataTN chan src.ElevatorData,
+					chOrderFN chan src.ButtonOrder,
+					chOrderTN chan src.ButtonOrder,
+					chDisconElevatorFN chan string) {
 	for {
 		select {
 			case <- chUpdateLights:
@@ -266,13 +280,13 @@ func queueManager(chFloorFC chan int, chOrderFC chan src.ButtonOrder, chOrderFin
 				chButtonLightsTC <- buttonLights
 				commandPrint()
 
-			case order := <- network.ChOrderToQueue:
+			case order := <- chOrderFN:
 				assignOrder(allElevatorsData, order)
 				currentOrder = calcNextOrderAndFloor(allElevatorsData[ourID])
 				if currentOrder.Floor != -1 {chDestinationFloorTC <- currentOrder.Floor}
-				network.ChQueueReadyToBeSent <- allElevatorsData[ourID]
+				chElevatorDataTN <- allElevatorsData[ourID]
 
-			case elevatorMessage := <- network.ChElevatorDataToQueue:
+			case elevatorMessage := <- chElevatorDataFN:
 				allElevatorsData[elevatorMessage.SenderAddress] = elevatorMessage.ElevatorData
 
 			case floor := <- chFloorFC:
@@ -281,26 +295,26 @@ func queueManager(chFloorFC chan int, chOrderFC chan src.ButtonOrder, chOrderFin
 				allElevatorsData[ourID] = tmp
 				currentOrder = calcNextOrderAndFloor(allElevatorsData[ourID])
 				if currentOrder.Floor != -1 {chDestinationFloorTC <- currentOrder.Floor}
-				network.ChQueueReadyToBeSent <- allElevatorsData[ourID]
+				chElevatorDataTN <- allElevatorsData[ourID]
 
 			case order := <- chOrderFC:
 				if (order.ButtonType != src.BUTTON_INSIDE){
-					network.ChOrderFromQueue <- order
+					chOrderTN <- order
 					assignOrder(allElevatorsData, order)
 				} else {
 					addOrder(ourID, order)
 				}
 				currentOrder = calcNextOrderAndFloor(allElevatorsData[ourID])
 				if currentOrder.Floor != -1 {chDestinationFloorTC <- currentOrder.Floor}
-				network.ChQueueReadyToBeSent <- allElevatorsData[ourID]
+				chElevatorDataTN <- allElevatorsData[ourID]
 
 			case <- chOrderFinishedFC:
 				deleteOrder(ourID, currentOrder)
 				currentOrder = calcNextOrderAndFloor(allElevatorsData[ourID])
 				if currentOrder.Floor != -1 {chDestinationFloorTC <- currentOrder.Floor}
-				network.ChQueueReadyToBeSent <- allElevatorsData[ourID]
+				chElevatorDataTN <- allElevatorsData[ourID]
 
-			case elevator := <- network.ChLostElevator:
+			case elevator := <- chDisconElevatorFN:
 				ordersToDistribute := allElevatorsData[elevator]
 				delete(allElevatorsData, elevator)
 				
@@ -312,7 +326,7 @@ func queueManager(chFloorFC chan int, chOrderFC chan src.ButtonOrder, chOrderFin
 					}
 				}
 
-				network.ChQueueReadyToBeSent <- allElevatorsData[ourID]
+				chElevatorDataTN <- allElevatorsData[ourID]
 				currentOrder = calcNextOrderAndFloor(allElevatorsData[ourID])
 				if currentOrder.Floor != -1 {chDestinationFloorTC <- currentOrder.Floor}
 		}

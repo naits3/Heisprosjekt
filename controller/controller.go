@@ -42,7 +42,7 @@ func InitController() {
 	state 			= IDLE
 	isOrderFinished = true
 	
-	queue.InitQueue(chFloorToQueue, chOrderToQueue, chOrderFinishedToQueue, chAllOrdersFromQueue, chDestinationFloorFromQueue)
+	go queue.InitQueue(chFloorToQueue, chOrderToQueue, chOrderFinishedToQueue, chAllOrdersFromQueue, chDestinationFloorFromQueue)
 	chFloorToQueue <- currentFloor
 
 	go controllerManager(chCommandToIo, chOrderFromIo, chFloorFromIo, chFloorToQueue, 
