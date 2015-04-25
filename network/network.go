@@ -9,10 +9,10 @@ import (
 )
 
 const PORT = "20013"	
-var IP string
+var ourIP string
 var connectedElevators = make(map[string]bool)
 
-var timeoutLimit time.Duration = 2*time.Second
+var verifyConnectionInterval time.Duration = 2*time.Second
 var sendMessageInterval time.Duration = 80*time.Millisecond
 
 type message struct {
@@ -85,8 +85,8 @@ func createBroadcastConn() *net.UDPConn{
 }
 
 
-func sendOrder(broadcastConn *net.UDPConn, message []byte) {
-	broadcastConn.Write(message)
+func sendOrder(broadcastConn *net.UDPConn, order src.ButtonOrder) {
+	broadcastConn.Write(PackOrder(order))
 }
 
 
@@ -112,7 +112,7 @@ func GetIPAddress() string {
 
 func timer(timeout chan bool) {
 	for {
-		time.Sleep(timeoutLimit)
+		time.Sleep(verifyConnectionInterval)
 		timeout <- true
 	}
 }
@@ -128,8 +128,8 @@ func InitNetwork(	chIdentificationTQ chan string,
 	chReceivedData := make(chan message)
 	chSendData := make(chan src.ElevatorData)
 
-	IP = GetIPAddress()	
-	chIdentificationTQ <- IP
+	ourIP = GetIPAddress()	
+	chIdentificationTQ <- ourIP
 	broadcastConn := createBroadcastConn()
 	go listenPing(chReceivedData)
 	go sendPing(broadcastConn, chSendData)
@@ -158,11 +158,10 @@ func networkManager(chIdentificationTQ chan string,
 		select {
 			
 			case order := <- chOrderFQ:
-				packedOrder := PackOrder(order)
-				sendOrder(broadcastConn, packedOrder)
+				sendOrder(broadcastConn, order)
 
 			case receivedMessage := <- chReceivedData:
-				if (receivedMessage.senderAddress == IP) {
+				if (receivedMessage.senderAddress == ourIP) {
 					break
 				}
 
