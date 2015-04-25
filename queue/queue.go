@@ -1,8 +1,6 @@
 package queue
 
 import (
-	//"strings"
-	//"strconv"
 	"Heisprosjekt/src"
 	"Heisprosjekt/network"
 	"time"
@@ -11,43 +9,33 @@ import (
 
 const (
 	ORDER = 1
-	EMPTY = 0
-	DELETE_ORDER = -1
-)
-
-const (
+	NO_ORDER = 0
 	COST_FOR_ORDER = 2
 	COST_FOR_MOVEMENT = 1
-
 )
 
 var ourID			string
-var globalOrders    src.ElevatorData
+var buttonLights    src.ElevatorData
 var currentOrder	src.ButtonOrder
-var elevatorQueues	= make(map[string] src.ElevatorData)
+var elevatorQueues 	= make(map[string] src.ElevatorData)
 var timeoutLimit time.Duration = 100*time.Millisecond
-var queueDirection	int
 
-
-// TESTED:
-func mergeOrders(elevatorQueues map[string] src.ElevatorData) src.ElevatorData {
-	var mergedData src.ElevatorData
-
+func determineButtonLights(elevatorQueues map[string] src.ElevatorData) src.ElevatorData {	
+	var buttonLights src.ElevatorData
 	for floor := 0; floor < src.N_FLOORS; floor ++ {
 		for direction := 0; direction < 2; direction ++ {
 			for _, elevatorQueue := range elevatorQueues {
 				if (elevatorQueue.OutsideOrders[floor][direction] == src.ORDER) {
-					mergedData.OutsideOrders[floor][direction] = src.ORDER
+					buttonLights.OutsideOrders[floor][direction] = src.ORDER
 				}
 			}
 		}
 	}
 
-	mergedData.InsideOrders = elevatorQueues[ourID].InsideOrders
-	return mergedData
+	buttonLights.InsideOrders = elevatorQueues[ourID].InsideOrders
+	return buttonLights
 }
 
-// TESTED:
 func assignOrder(elevatorQueues map[string] src.ElevatorData, order src.ButtonOrder) {
 	var minID string
 	minCost := 100000
@@ -195,30 +183,11 @@ func addOrder(ID string, order src.ButtonOrder) {
 func deleteOrder(ID string, order src.ButtonOrder) {
 	if (order.Floor != -1 && order.ButtonType != src.BUTTON_NONE) {
 		tmp := elevatorQueues[ID]
-		tmp.InsideOrders[order.Floor] = EMPTY
-		tmp.OutsideOrders[order.Floor][order.ButtonType] = EMPTY
+		tmp.InsideOrders[order.Floor] = NO_ORDER
+		tmp.OutsideOrders[order.Floor][order.ButtonType] = NO_ORDER
 		elevatorQueues[ID] = tmp
 	}
 }
-
-
-// func InitQueue(chFloorFromController chan int, chOrderFromController chan src.ButtonOrder, chDirectionFromController chan int, chFinishedFromController chan bool, chGlobalOrdersToController chan src.ElevatorData, chDestinationFloorToController chan int) {
-// 	go network.NetworkHandler()
-// 	ourID = <- network.ChIDFromNetwork
-// 	var InitialQueue src.ElevatorData
-
-// 	InitialQueue.Floor = <- chFloorFromController
-// 	println("lol")
-// 	elevatorQueues[ourID] = InitialQueue
-// 	network.ChQueueReadyToBeSent <- elevatorQueues[ourID]
-
-// 	go queueManager(chFloorFromController, 
-// 					chOrderFromController, 
-// 					chDirectionFromController, 
-// 					chFinishedFromController, 
-// 					chGlobalOrdersToController, 
-// 					chDestinationFloorToController)
-// }
 
 func timer(timeout chan bool) {
 	for {
@@ -227,16 +196,43 @@ func timer(timeout chan bool) {
 	}
 }
 
-func QueueManager(chFloorFromController chan int, chOrderFromController chan src.ButtonOrder, chFinishedFromController chan bool, chGlobalOrdersToController chan src.ElevatorData, chDestinationFloorToController chan int) {
-	var chUpdateGlobalOrders = make(chan bool)
 
-	go network.NetworkHandler()
+func abs(value int) int {
+	if (value >= 0) { 	return value
+	}else { 				return -1*value}
+}
+
+
+func commandPrint() {
+	println(" ---- ORDERS ------")
+	for id, queues := range elevatorQueues {
+		println(id)
+		tools.PrintQueue(queues)
+	}
+}
+
+
+func InitQueue(chFloorFromController chan int, chOrderFromController chan src.ButtonOrder, chFinishedFromController chan bool, chGlobalOrdersToController chan src.ElevatorData, chDestinationFloorToController chan int) {
+	var chUpdateGlobalOrders = make(chan bool)
+ 	go network.NetworkHandler()
 	ourID = <- network.ChIDFromNetwork
-	var InitialQueue src.ElevatorData
+ 	var InitialQueue src.ElevatorData
+
+ 	go queueManager(chFloorFromController, chOrderFromController, chFinishedFromController,	chGlobalOrdersToController, chDestinationFloorToController,
+					chUpdateGlobalOrders,  InitialQueue)
+}
+
+
+func queueManager(	chFloorFromController chan int,
+					chOrderFromController chan src.ButtonOrder,
+					chFinishedFromController chan bool,
+					chGlobalOrdersToController chan src.ElevatorData,
+					chDestinationFloorToController chan int,
+					chUpdateGlobalOrders chan bool,
+					InitialQueue src.ElevatorData) {	
 
 	InitialQueue.Floor = <- chFloorFromController
 	elevatorQueues[ourID] = InitialQueue
-
 	network.ChQueueReadyToBeSent <- elevatorQueues[ourID]	
 	go timer(chUpdateGlobalOrders)
 
@@ -244,13 +240,9 @@ func QueueManager(chFloorFromController chan int, chOrderFromController chan src
 		select {
 			
 			case <- chUpdateGlobalOrders:
-				globalOrders = mergeOrders(elevatorQueues)
-				chGlobalOrdersToController <- globalOrders
-				println(" ---- ORDERS ------")
-				for id, queues := range elevatorQueues {
-					println(id)
-					tools.PrintQueue(queues)
-				}
+				buttonLights = determineButtonLights(elevatorQueues)
+				chGlobalOrdersToController <- buttonLights
+				commandPrint()
 
 			case order := <- network.ChOrderToQueue:
 				assignOrder(elevatorQueues, order)
@@ -270,7 +262,6 @@ func QueueManager(chFloorFromController chan int, chOrderFromController chan src
 				network.ChQueueReadyToBeSent <- elevatorQueues[ourID]
 
 			case order := <- chOrderFromController:
-				println("got order!")
 				if (order.ButtonType != src.BUTTON_INSIDE){
 					network.ChOrderFromQueue <- order
 					assignOrder(elevatorQueues, order)
@@ -286,13 +277,6 @@ func QueueManager(chFloorFromController chan int, chOrderFromController chan src
 				currentOrder = calcNextOrderAndFloor(elevatorQueues[ourID])
 				if currentOrder.Floor != -1 {chDestinationFloorToController <- currentOrder.Floor}
 				network.ChQueueReadyToBeSent <- elevatorQueues[ourID]
-
-			//case direction := <- chDirectionFromController:
-			//	println("Q: direction = ",direction)
-			//	tmp := elevatorQueues[ourID]
-			//	tmp.Direction = direction
-			//	elevatorQueues[ourID] = tmp
-			//	network.ChQueueReadyToBeSent <- elevatorQueues[ourID]
 
 			case elevator := <- network.ChLostElevator:
 				dataToDistrubute := elevatorQueues[elevator]
@@ -312,25 +296,3 @@ func QueueManager(chFloorFromController chan int, chOrderFromController chan src
 		}
 	}
 }
-
-func abs(value int) int {
-	if (value >= 0) { 	return value
-	}else { 				return -1*value}
-}
-
-// TODO:
-// * renew calcNextFloor and add functionality for DIR_STOP(behøver vi egentlig det?)
-
-// BUGS:
-// * Hvis vi står i 2. etg, og behandler "ned" ordre, og dermed trykker på "ned"-ordre i 3. etg, vil 
-//   heisen slette ordren i 3... Dette er fordi calcNextFloor tror vi står i idle, og beregner basert 
-//   på at vi er på vei opp																				| FIXED
-
-// * Heisen tar alle opp- og ned- etasjer når den går ovenfra og nedover. Dette er fordi calc cost 
-//   beregner likt for opp og idle, og når en heis står i en etasje er den i idle. 						| FIXED
-
-// * Dersom heiser står i 3., og får en bestilling i 1. går den ned. Når den er mellom 3. og 2., og den 
-//   får en ny bestilling i 3, vil den TRO at det står i 3. og sier at den skal ta denne. Men den skal 
-//   jo ta bestillingen i 2. (Ikke 1.pri å fikse)
-
-// * Heisen mottar bestillinger over nettet, men det er ikke alltid at den tar bestillingen.
