@@ -16,140 +16,160 @@ const (
 
 var ourID			string
 var currentOrder	src.ButtonOrder
-var elevatorQueues 	= make(map[string] src.ElevatorData)
-var timeoutLimit time.Duration = 100*time.Millisecond
+var allElevatorsData 	= make(map[string] src.ElevatorData)
 
-func determineButtonLights(elevatorQueues map[string] src.ElevatorData) [src.N_FLOORS][3]int {	
+
+func determineButtonLights(allElevatorsData map[string] src.ElevatorData) [src.N_FLOORS][3]int {	
 	var buttonLights [src.N_FLOORS][3]int
 	for floor := 0; floor < src.N_FLOORS; floor ++ {
 		for buttonType := 0; buttonType < 2; buttonType ++ {
-			for _, elevatorQueue := range elevatorQueues {
-				if (elevatorQueue.OutsideOrders[floor][buttonType] == src.ORDER) {
+			for _, elevatorData := range allElevatorsData {
+				if (elevatorData.OutsideOrders[floor][buttonType] == src.ORDER) {
 					buttonLights[floor][buttonType] = src.ORDER
 				}
 			}
 		}
 
-		buttonLights[floor][2] = elevatorQueues[ourID].InsideOrders[floor]		
+		buttonLights[floor][2] = allElevatorsData[ourID].InsideOrders[floor]		
 	}
 	return buttonLights
 }
 
-func assignOrder(elevatorQueues map[string] src.ElevatorData, order src.ButtonOrder) {
-	var minID string
-	minCost := 100000
 
-	for elevatorID, elevatorQueue := range elevatorQueues {
-		if (elevatorQueue.OutsideOrders[order.Floor][order.ButtonType] == src.ORDER) {
-			minID = elevatorID
+func assignOrder(allElevatorsData map[string] src.ElevatorData, order src.ButtonOrder) {
+	var minCostID string
+	largeNumber := 100000
+	minCost := largeNumber
+
+	for elevatorID, elevatorData := range allElevatorsData {
+		if (elevatorData.OutsideOrders[order.Floor][order.ButtonType] == src.ORDER) {
+			minCostID = elevatorID
 			break;
 		}
 
-		cost := calcOrderCost(elevatorQueue, order)
+		cost := calcOrderCost(elevatorData, order)
 		if (cost < minCost) {
-			minID = elevatorID
+			minCostID = elevatorID
 			minCost = cost
 		
-		} else if (cost == minCost && elevatorID < minID) {
-			minID = elevatorID
+		} else if (cost == minCost && elevatorID < minCostID) {
+			minCostID = elevatorID
 			minCost = cost
 		}
 	}
 
-	if (minID == ourID) {
+	if (minCostID == ourID) {
 		addOrder(ourID, order)
 		
 	}
 }
 
 
-func calcOrderCost(elevator src.ElevatorData, order src.ButtonOrder) int {
+func calcOrderCost(elevatorData src.ElevatorData, order src.ButtonOrder) int {
 	cost := 0
 
 	for floor := 0; floor < src.N_FLOORS; floor ++ {
-		for direction := 0; direction < 2; direction ++ {
-			if (elevator.OutsideOrders[floor][direction] == ORDER) {
+		for buttonType := 0; buttonType < 2; buttonType ++ {
+			if (elevatorData.OutsideOrders[floor][buttonType] == ORDER) {
 				cost += COST_FOR_ORDER
 			}
 
-			if (elevator.InsideOrders[floor] == ORDER) {
+			if (elevatorData.InsideOrders[floor] == ORDER) {
 				cost += COST_FOR_ORDER
 			}
 		}
 	}
 
-	cost+= COST_FOR_MOVEMENT * abs(elevator.Floor - order.Floor)
+	cost+= COST_FOR_MOVEMENT * abs(elevatorData.Floor - order.Floor)
 	return cost 
 }
 
 
-func calcNextOrderAndFloor(queueMatrix src.ElevatorData) src.ButtonOrder {
-	currentOrder := src.ButtonOrder{-1, src.BUTTON_NONE}
-	tmp := elevatorQueues[ourID]
+func isOrderAtFloor(elevatorData src.ElevatorData, buttonType int, floor int) bool {
+	return elevatorData.OutsideOrders[floor][buttonType] == ORDER || elevatorData.InsideOrders[floor] == ORDER
+}
 
-	switch elevatorQueues[ourID].Direction {
+func calcDirection(currentFloor int, destinationFloor int, direction int) int{
+	switch direction {
+		
+		case src.DIR_DOWN:
+			
+			if (destinationFloor > currentFloor) {
+				return src.DIR_UP
+			} else {
+				return src.DIR_DOWN
+			}
+
 		case src.DIR_UP, src.DIR_STOP:
 			
-			for floor := queueMatrix.Floor; floor < src.N_FLOORS - 1; floor ++ {
-				if (queueMatrix.OutsideOrders[floor][src.BUTTON_UP] == ORDER || queueMatrix.InsideOrders[floor] == ORDER) {
+			if (destinationFloor < currentFloor) {
+				return src.DIR_DOWN
+			} else {
+				return src.DIR_UP
+			}
+	}
+	return direction
+}
+
+func calcNextOrderAndFloor(elevatorData src.ElevatorData) src.ButtonOrder {
+	currentOrder := src.ButtonOrder{-1, src.BUTTON_NONE}
+	tmp := allElevatorsData[ourID]
+
+	switch allElevatorsData[ourID].Direction {
+		case src.DIR_UP, src.DIR_STOP:
+			
+			for floor := elevatorData.Floor; floor < src.N_FLOORS - 1; floor ++ {
+				if (isOrderAtFloor(elevatorData, src.BUTTON_UP, floor)) {
 					currentOrder = src.ButtonOrder{floor, src.BUTTON_UP}
-					tmp.Direction = src.DIR_UP
-					elevatorQueues[ourID] = tmp
+					tmp.Direction = calcDirection(allElevatorsData[ourID].Floor, floor, tmp.Direction)
+					allElevatorsData[ourID] = tmp
 					return currentOrder
 				}
 			}
 
 			for floor := src.N_FLOORS - 1; floor > 0; floor -- {
-				if (queueMatrix.OutsideOrders[floor][src.BUTTON_DOWN] == ORDER || queueMatrix.InsideOrders[floor] == ORDER) {
+				if (isOrderAtFloor(elevatorData, src.BUTTON_DOWN, floor)) {
 					currentOrder = src.ButtonOrder{floor, src.BUTTON_DOWN}
-					if (floor < elevatorQueues[ourID].Floor) {
-						tmp.Direction = src.DIR_DOWN
-					} else {
-						tmp.Direction = src.DIR_UP
-					}
-					elevatorQueues[ourID] = tmp
+					tmp.Direction = calcDirection(allElevatorsData[ourID].Floor, floor, tmp.Direction)
+					allElevatorsData[ourID] = tmp
 					return currentOrder
 				}
 			}
 
-			for floor := 0; floor < queueMatrix.Floor; floor ++ {
-				if (queueMatrix.OutsideOrders[floor][src.BUTTON_UP] == ORDER || queueMatrix.InsideOrders[floor] == ORDER) {
+			for floor := 0; floor < elevatorData.Floor; floor ++ {
+				if (isOrderAtFloor(elevatorData, src.BUTTON_UP, floor)) {
 					currentOrder = src.ButtonOrder{floor, src.BUTTON_UP}
-					tmp.Direction = src.DIR_DOWN
-					elevatorQueues[ourID] = tmp
+					tmp.Direction = calcDirection(allElevatorsData[ourID].Floor, floor, tmp.Direction)
+					allElevatorsData[ourID] = tmp
 					return currentOrder
 				}
 			}
 
 		case src.DIR_DOWN:
 			
-			for floor := queueMatrix.Floor; floor > 0; floor -- {
-				if (queueMatrix.OutsideOrders[floor][src.BUTTON_DOWN] == ORDER || queueMatrix.InsideOrders[floor] == ORDER) {
+			for floor := elevatorData.Floor; floor > 0; floor -- {
+				if (isOrderAtFloor(elevatorData, src.BUTTON_DOWN, floor)) {
 					currentOrder = src.ButtonOrder{floor, src.BUTTON_DOWN}
-					tmp.Direction = src.DIR_DOWN
-					elevatorQueues[ourID] = tmp
+					tmp.Direction = calcDirection(allElevatorsData[ourID].Floor, floor, tmp.Direction)
+					allElevatorsData[ourID] = tmp
 					return currentOrder
 				}
 			}
 
 			for floor := 0; floor < src.N_FLOORS - 1; floor ++ {
-				if (queueMatrix.OutsideOrders[floor][src.BUTTON_UP] == ORDER || queueMatrix.InsideOrders[floor] == ORDER) {
+				if (isOrderAtFloor(elevatorData, src.BUTTON_UP, floor)) {
 					currentOrder = src.ButtonOrder{floor, src.BUTTON_UP}
-					if (floor > elevatorQueues[ourID].Floor) {
-						tmp.Direction = src.DIR_UP
-					} else {
-						tmp.Direction = src.DIR_DOWN
-					}
-					elevatorQueues[ourID] = tmp
+					tmp.Direction = calcDirection(allElevatorsData[ourID].Floor, floor, tmp.Direction)
+					allElevatorsData[ourID] = tmp
 					return currentOrder
 				}
 			}
 
-			for floor := src.N_FLOORS - 1; floor > queueMatrix.Floor; floor -- {
-				if (queueMatrix.OutsideOrders[floor][src.BUTTON_DOWN] == ORDER || queueMatrix.InsideOrders[floor] == ORDER) {
+			for floor := src.N_FLOORS - 1; floor > elevatorData.Floor; floor -- {
+				if (isOrderAtFloor(elevatorData, src.BUTTON_DOWN, floor)) {
 					currentOrder = src.ButtonOrder{floor, src.BUTTON_DOWN}
-					tmp.Direction = src.DIR_UP
-					elevatorQueues[ourID] = tmp
+					tmp.Direction = calcDirection(allElevatorsData[ourID].Floor, floor, tmp.Direction)
+					allElevatorsData[ourID] = tmp
 					return currentOrder
 				}
 			}
@@ -158,7 +178,7 @@ func calcNextOrderAndFloor(queueMatrix src.ElevatorData) src.ButtonOrder {
 	}
 
 	tmp.Direction = src.DIR_STOP
-	elevatorQueues[ourID] = tmp
+	allElevatorsData[ourID] = tmp
 	return currentOrder
 }
 
@@ -167,131 +187,134 @@ func addOrder(ID string, order src.ButtonOrder) {
 	switch(order.ButtonType) {
 
 		case src.BUTTON_INSIDE:
-			tmp := elevatorQueues[ID]
+			tmp := allElevatorsData[ID]
 			tmp.InsideOrders[order.Floor] = ORDER
-			elevatorQueues[ID] = tmp
+			allElevatorsData[ID] = tmp
 		
 		default:
-			tmp := elevatorQueues[ID]
+			tmp := allElevatorsData[ID]
 			tmp.OutsideOrders[order.Floor][order.ButtonType] = ORDER
-			elevatorQueues[ID] = tmp
+			allElevatorsData[ID] = tmp
 	}
 }
 
 
 func deleteOrder(ID string, order src.ButtonOrder) {
 	if (order.Floor != -1 && order.ButtonType != src.BUTTON_NONE) {
-		tmp := elevatorQueues[ID]
+		tmp := allElevatorsData[ID]
 		tmp.InsideOrders[order.Floor] = NO_ORDER
 		tmp.OutsideOrders[order.Floor][order.ButtonType] = NO_ORDER
-		elevatorQueues[ID] = tmp
+		allElevatorsData[ID] = tmp
 	}
 }
 
-func timer(timeout chan bool) {
+func updateLightsTimer(timeout chan bool) {
+	updateLightsInterval := 100*time.Millisecond
+	
 	for {
-		time.Sleep(timeoutLimit)
+		time.Sleep(updateLightsInterval)
 		timeout <- true
 	}
 }
 
 
 func abs(value int) int {
-	if (value >= 0) { 	return value
-	}else { 				return -1*value}
+	if (value >= 0) { 	
+		return value
+	}else { 				
+		return -1*value
+	}
 }
 
 
 func commandPrint() {
 	println(" ---- ORDERS ------")
-	for id, queues := range elevatorQueues {
+	for id, queues := range allElevatorsData {
 		println(id)
 		tools.PrintQueue(queues)
 	}
 }
 
 
-func InitQueue(chFloorFromController chan int, chOrderFromController chan src.ButtonOrder, chFinishedFromController chan bool, chGlobalOrdersToController chan [src.N_FLOORS][3]int, chDestinationFloorToController chan int) {
-	var chUpdateGlobalOrders = make(chan bool)
+func InitQueue(chFloorFC chan int, chOrderFC chan src.ButtonOrder, chOrderFinishedFC chan bool, chButtonLightsTC chan [src.N_FLOORS][3]int, chDestinationFloorTC chan int) {
+	var chUpdateLights = make(chan bool)
+	//var chIdentificationFN = make(chan string)
+	//var chElevatorDataFN = make(chan network.ElevatorMessage)
+	//var chElevatorDataTN = make(chan src.ElevatorData)
+	//var chOrderFN = make(chan src.Order)
+	//var chOrderTN = make(chan src.Order)
+	//var chDisconElevatorFN = make(chan string)
+
  	go network.NetworkHandler()
 	ourID = <- network.ChIDFromNetwork
- 	var InitialQueue src.ElevatorData
+ 	var InitialElevatorData src.ElevatorData
 
- 	go queueManager(chFloorFromController, chOrderFromController, chFinishedFromController,	chGlobalOrdersToController, chDestinationFloorToController,
-					chUpdateGlobalOrders,  InitialQueue)
+ 	go queueManager(chFloorFC, chOrderFC, chOrderFinishedFC, chButtonLightsTC, chDestinationFloorTC, chUpdateLights,  InitialElevatorData)
 }
 
 
-func queueManager(	chFloorFromController chan int,
-					chOrderFromController chan src.ButtonOrder,
-					chFinishedFromController chan bool,
-					chGlobalOrdersToController chan [src.N_FLOORS][3]int,
-					chDestinationFloorToController chan int,
-					chUpdateGlobalOrders chan bool,
-					InitialQueue src.ElevatorData) {	
-
-	InitialQueue.Floor = <- chFloorFromController
-	elevatorQueues[ourID] = InitialQueue
-	network.ChQueueReadyToBeSent <- elevatorQueues[ourID]	
-	go timer(chUpdateGlobalOrders)
+func queueManager(chFloorFC chan int, chOrderFC chan src.ButtonOrder, chOrderFinishedFC chan bool, chButtonLightsTC chan [src.N_FLOORS][3]int, chDestinationFloorTC chan int, chUpdateLights chan bool, InitialElevatorData src.ElevatorData) {	
+	InitialElevatorData.Floor = <- chFloorFC
+	allElevatorsData[ourID] = InitialElevatorData
+	network.ChQueueReadyToBeSent <- allElevatorsData[ourID]	
+	go updateLightsTimer(chUpdateLights)
 
 	for {
 		select {
-			
-			case <- chUpdateGlobalOrders:
-				buttonLights := determineButtonLights(elevatorQueues)
-				chGlobalOrdersToController <- buttonLights
+			case <- chUpdateLights:
+				buttonLights := determineButtonLights(allElevatorsData)
+				chButtonLightsTC <- buttonLights
 				commandPrint()
 
 			case order := <- network.ChOrderToQueue:
-				assignOrder(elevatorQueues, order)
-				currentOrder = calcNextOrderAndFloor(elevatorQueues[ourID])
-				if currentOrder.Floor != -1 {chDestinationFloorToController <- currentOrder.Floor}
-				network.ChQueueReadyToBeSent <- elevatorQueues[ourID]
+				assignOrder(allElevatorsData, order)
+				currentOrder = calcNextOrderAndFloor(allElevatorsData[ourID])
+				if currentOrder.Floor != -1 {chDestinationFloorTC <- currentOrder.Floor}
+				network.ChQueueReadyToBeSent <- allElevatorsData[ourID]
 
-			case updatedQueue := <- network.ChElevatorDataToQueue:
-				elevatorQueues[updatedQueue.SenderAddress] = updatedQueue.Data
+			case elevatorMessage := <- network.ChElevatorDataToQueue:
+				allElevatorsData[elevatorMessage.SenderAddress] = elevatorMessage.ElevatorData
 
-			case floor := <- chFloorFromController:
-				tmp := elevatorQueues[ourID]
+			case floor := <- chFloorFC:
+				tmp := allElevatorsData[ourID]
 				tmp.Floor = floor
-				elevatorQueues[ourID] = tmp
-				currentOrder = calcNextOrderAndFloor(elevatorQueues[ourID])
-				if currentOrder.Floor != -1 {chDestinationFloorToController <- currentOrder.Floor}
-				network.ChQueueReadyToBeSent <- elevatorQueues[ourID]
+				allElevatorsData[ourID] = tmp
+				currentOrder = calcNextOrderAndFloor(allElevatorsData[ourID])
+				if currentOrder.Floor != -1 {chDestinationFloorTC <- currentOrder.Floor}
+				network.ChQueueReadyToBeSent <- allElevatorsData[ourID]
 
-			case order := <- chOrderFromController:
+			case order := <- chOrderFC:
 				if (order.ButtonType != src.BUTTON_INSIDE){
 					network.ChOrderFromQueue <- order
-					assignOrder(elevatorQueues, order)
+					assignOrder(allElevatorsData, order)
 				} else {
 					addOrder(ourID, order)
 				}
-				currentOrder = calcNextOrderAndFloor(elevatorQueues[ourID])
-				if currentOrder.Floor != -1 {chDestinationFloorToController <- currentOrder.Floor}
-				network.ChQueueReadyToBeSent <- elevatorQueues[ourID]
+				currentOrder = calcNextOrderAndFloor(allElevatorsData[ourID])
+				if currentOrder.Floor != -1 {chDestinationFloorTC <- currentOrder.Floor}
+				network.ChQueueReadyToBeSent <- allElevatorsData[ourID]
 
-			case <- chFinishedFromController:
+			case <- chOrderFinishedFC:
 				deleteOrder(ourID, currentOrder)
-				currentOrder = calcNextOrderAndFloor(elevatorQueues[ourID])
-				if currentOrder.Floor != -1 {chDestinationFloorToController <- currentOrder.Floor}
-				network.ChQueueReadyToBeSent <- elevatorQueues[ourID]
+				currentOrder = calcNextOrderAndFloor(allElevatorsData[ourID])
+				if currentOrder.Floor != -1 {chDestinationFloorTC <- currentOrder.Floor}
+				network.ChQueueReadyToBeSent <- allElevatorsData[ourID]
 
 			case elevator := <- network.ChLostElevator:
-				dataToDistrubute := elevatorQueues[elevator]
-				delete(elevatorQueues, elevator)
+				ordersToDistribute := allElevatorsData[elevator]
+				delete(allElevatorsData, elevator)
 				
 				for floor := 0; floor < src.N_FLOORS; floor ++ {
-					for direction := 0; direction < 2; direction ++ {
-						if (dataToDistrubute.OutsideOrders[floor][direction] == src.ORDER) {
-							assignOrder(elevatorQueues, src.ButtonOrder{floor, direction})
+					for buttonType := 0; buttonType < 2; buttonType ++ {
+						if (ordersToDistribute.OutsideOrders[floor][buttonType] == src.ORDER) {
+							assignOrder(allElevatorsData, src.ButtonOrder{floor, buttonType})
 						}
 					}
 				}
 
-				network.ChQueueReadyToBeSent <- elevatorQueues[ourID]
-				currentOrder = calcNextOrderAndFloor(elevatorQueues[ourID])
-				if currentOrder.Floor != -1 {chDestinationFloorToController <- currentOrder.Floor}
+				network.ChQueueReadyToBeSent <- allElevatorsData[ourID]
+				currentOrder = calcNextOrderAndFloor(allElevatorsData[ourID])
+				if currentOrder.Floor != -1 {chDestinationFloorTC <- currentOrder.Floor}
 		}
 	}
 }

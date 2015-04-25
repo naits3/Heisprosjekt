@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 	"Heisprosjekt/src"
-	//"Heisprosjekt/tools"
 )
 
 const PORT = "20013"	
@@ -21,13 +20,13 @@ type message struct {
 	data 			[]byte
 }
 
-type QueueMessage struct {
+type ElevatorMessage struct {
 	SenderAddress 	string
-	Data 			src.ElevatorData
+	ElevatorData 			src.ElevatorData
 }
 
 
-var ChElevatorDataToQueue 	= make(chan QueueMessage)
+var ChElevatorDataToQueue 	= make(chan ElevatorMessage)
 var ChOrderToQueue 			= make(chan src.ButtonOrder)
 var ChIDFromNetwork			= make(chan string)
 var ChQueueReadyToBeSent 	= make(chan src.ElevatorData, 2)
@@ -44,7 +43,6 @@ func sendPing(broadcastConn *net.UDPConn, chOutgoingData chan src.ElevatorData){
 				dataToSend = outgoingData
 
 			default:
-				//tools.PrintQueue(dataToSend)
 				broadcastConn.Write(PackQueue(dataToSend))
 				time.Sleep(sendMessageInterval)
 		}
@@ -75,7 +73,6 @@ func listenPing(chReceivedMessage chan message){
 		IPaddress := IPaddressAndPortArray[0]
 		
 		chReceivedMessage <- message{ IPaddress, buffer[:lengthOfMessage] }
-		//time.Sleep(10*time.Millisecond)
 	}
 }
 
@@ -91,7 +88,7 @@ func createBroadcastConn() *net.UDPConn{
 	UDPAddr, err := net.ResolveUDPAddr("udp",broadcastIP + ":" + PORT)
 
 	broadcastConn, err := net.DialUDP("udp",nil,UDPAddr)
-	if err != nil {print("Error creating UDP") }// Error handling here}
+	if err != nil {print("Error creating UDP") }
 	return broadcastConn
 }
 
@@ -104,8 +101,7 @@ func sendOrder(broadcastConn *net.UDPConn, message []byte) {
 func GetIPAddress() string {
 	addrs, err := net.InterfaceAddrs()
     if err != nil {
-    	println(err)
-		// error handle here                
+    	println(err)              
     }
 
     for _, address := range addrs {
@@ -155,14 +151,12 @@ func NetworkHandler() {
 
 			case receivedMessage := <- chReceivedData:
 				if (receivedMessage.senderAddress == IP) {
-					//tools.PrintQueue(UnpackQueue(receivedMessage.data))
 					break
 				}
 
 				connectedElevators[receivedMessage.senderAddress] = true
-				// Need to find out how to receive multiple data with JSON...
 				if (len(receivedMessage.data) > 50) {
-					ChElevatorDataToQueue <- QueueMessage{receivedMessage.senderAddress, UnpackQueue(receivedMessage.data)}
+					ChElevatorDataToQueue <- ElevatorMessage{receivedMessage.senderAddress, UnpackQueue(receivedMessage.data)}
 
 				}else {
 					ChOrderToQueue <- UnpackOrder(receivedMessage.data)
@@ -185,15 +179,7 @@ func NetworkHandler() {
 
 					}
 				}
-
-			// default:
-			// 	time.Sleep(10*time.Millisecond)
 		}
 	}
 	
 }
-
-
-
-// TODO:
-
