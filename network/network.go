@@ -35,7 +35,7 @@ func sendElevatorData(broadcastConn *net.UDPConn, chSendElevatorData chan src.El
 				dataToSend = elevatorData
 
 			default:
-				broadcastConn.Write(PackQueue(dataToSend))
+				broadcastConn.Write(PackElevatorData(dataToSend))
 				time.Sleep(sendMessageInterval)
 		}
 	}
@@ -49,18 +49,14 @@ func listenForMessage(chReceivedMessage chan message){
 	conn, err := net.ListenUDP("udp", UDPAddr)
 
 	if err != nil {
-		println(err)
-		return
+		println("Cannot create a connection! Exiting..")
+		os.Exit(1)
 	}
 
 	defer conn.Close()
 	for {
-		lengthOfMessage, IPaddressAndPort, err := conn.ReadFromUDP(buffer)
-		if err != nil {
-			print(err)
-			return
-		}
-
+		lengthOfMessage, IPaddressAndPort, _ := conn.ReadFromUDP(buffer)
+		
 		IPaddressAndPortArray := strings.Split(IPaddressAndPort.String(),":")
 		IPaddress := IPaddressAndPortArray[0]
 		
@@ -71,34 +67,36 @@ func listenForMessage(chReceivedMessage chan message){
 
 func createBroadcastConn() *net.UDPConn{
 
-	broadcastIP := GetIPAddress()
+	ipAddress := GetIPAddress()
 
-	ipArray := strings.Split(broadcastIP,".")
+	ipArray := strings.Split(ipAddress,".")
 	ipArray[3] = "255"
-	broadcastIP = strings.Join(ipArray,".")
+	broadcastIP := strings.Join(ipArray,".")
 	
-	UDPAddr, err := net.ResolveUDPAddr("udp",broadcastIP + ":" + PORT)
+	UDPAddr, _ := net.ResolveUDPAddr("udp",broadcastIP + ":" + PORT)
 
 	broadcastConn, err := net.DialUDP("udp",nil,UDPAddr)
-	if err != nil {print("Error creating UDP") }
+	if err != nil {
+		println("Cannot create a connection! Exiting..")
+		os.Exit(1)
+	}
 	return broadcastConn
 }
 
 
 func sendOrder(broadcastConn *net.UDPConn, order src.ButtonOrder) {
-	broadcastConn.Write(PackOrder(order))
+	packedOrder := PackOrder(order)
+	broadcastConn.Write(packedOrder)
 }
 
 
 func GetIPAddress() string {
-	addrs, err := net.InterfaceAddrs()
-    if err != nil {
-    	println(err)              
-    }
-
+	addrs, _ := net.InterfaceAddrs()
+    
     for _, address := range addrs {
-        if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-        	if ipnet.IP.To4() != nil {
+    	ipnet, ok := address.(*net.IPNet)
+        if (ok && !ipnet.IP.IsLoopback()) {
+        	if (ipnet.IP.To4() != nil) {
             	return ipnet.IP.String()
         	}
     	}
@@ -110,10 +108,10 @@ func GetIPAddress() string {
 }
 
 
-func timer(timeout chan bool) {
+func verifyConnectionTimer(chVerifyConnectedElevators chan bool) {
 	for {
 		time.Sleep(verifyConnectionInterval)
-		timeout <- true
+		chVerifyConnectedElevators <- true
 	}
 }
 
@@ -124,21 +122,21 @@ func InitNetwork(	chIdentificationTQ chan string,
 					chOrderFQ chan src.ButtonOrder,
 					chDisconElevatorTQ chan string) {
 
-	chVerifyConnectedElevators := make(chan bool)
-	chReceivedData := make(chan message)
-	chSendElevatorData := make(chan src.ElevatorData)
+	chVerifyConnectedElevators 	:= make(chan bool)
+	chReceivedMessage 			:= make(chan message)
+	chSendElevatorData 			:= make(chan src.ElevatorData)
 
 	ourIP = GetIPAddress()	
 	chIdentificationTQ <- ourIP
 	broadcastConn := createBroadcastConn()
-	go listenForMessage(chReceivedData)
+	go listenForMessage(chReceivedMessage)
 	go sendElevatorData(broadcastConn, chSendElevatorData)
-	go timer(chVerifyConnectedElevators)
+	go verifyConnectionTimer(chVerifyConnectedElevators)
 
 	elevatorData :=  <- chElevatorDataFQ
 	chSendElevatorData <- elevatorData
 
-	go networkManager(chIdentificationTQ, chElevatorDataTQ, chElevatorDataFQ, chOrderTQ, chOrderFQ, chDisconElevatorTQ, chVerifyConnectedElevators, chReceivedData, chSendElevatorData, broadcastConn)
+	go networkManager(chIdentificationTQ, chElevatorDataTQ, chElevatorDataFQ, chOrderTQ, chOrderFQ, chDisconElevatorTQ, chVerifyConnectedElevators, chReceivedMessage, chSendElevatorData, broadcastConn)
 
 }
 
@@ -150,7 +148,7 @@ func networkManager(chIdentificationTQ chan string,
 					chOrderFQ chan src.ButtonOrder,
 					chDisconElevatorTQ chan string,
 					chVerifyConnectedElevators chan bool,
-					chReceivedData chan message,
+					chReceivedMessage chan message,
 					chSendElevatorData chan src.ElevatorData,
 					broadcastConn *net.UDPConn) {
 
@@ -160,14 +158,15 @@ func networkManager(chIdentificationTQ chan string,
 			case order := <- chOrderFQ:
 				sendOrder(broadcastConn, order)
 
-			case receivedMessage := <- chReceivedData:
+			case receivedMessage := <- chReceivedMessage:
 				if (receivedMessage.senderAddress == ourIP) {
 					break
 				}
 
 				connectedElevators[receivedMessage.senderAddress] = true
+			
 				if (len(receivedMessage.data) > 50) {
-					chElevatorDataTQ <- ElevatorMessage{receivedMessage.senderAddress, UnpackQueue(receivedMessage.data)}
+					chElevatorDataTQ <- ElevatorMessage{receivedMessage.senderAddress, UnpackElevatorData(receivedMessage.data)}
 
 				}else {
 					chOrderTQ <- UnpackOrder(receivedMessage.data)
