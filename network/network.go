@@ -18,7 +18,8 @@ var sendMessageInterval time.Duration = 80*time.Millisecond
 type message struct {
 	senderAddress 	string
 	messageType		string
-	data 			[]byte
+	elevatorData 	src.ElevatorData
+	order 			src.ButtonOrder
 }
 
 type ElevatorMessage struct {
@@ -36,7 +37,7 @@ func sendElevatorData(broadcastConn *net.UDPConn, chSendElevatorData chan src.El
 				dataToSend = elevatorData
 
 			default:
-				msg := message{ourIP, "elevatorData", PackElevatorData(dataToSend)}
+				msg := message{ourIP, "elevatorData", dataToSend, src.ButtonOrder{}}
 				packedMsg := PackMessage(msg)
 				broadcastConn.Write(packedMsg)
 				time.Sleep(sendMessageInterval)
@@ -62,6 +63,7 @@ func listenForMessage(chReceivedMessage chan message){
 
 		msg := UnpackMessage(buffer[:lengthOfMessage])
 		chReceivedMessage <- msg
+		println(msg.senderAddress)
 	}
 }
 
@@ -86,7 +88,7 @@ func createBroadcastConn() *net.UDPConn{
 
 
 func sendOrder(broadcastConn *net.UDPConn, order src.ButtonOrder) {
-	msg := message{ourIP, "order", PackOrder(order)}
+	msg := message{ourIP, "order", src.ElevatorData{}, order}
 	packedMsg := PackMessage(msg)
 	broadcastConn.Write(packedMsg)
 }
@@ -123,6 +125,7 @@ func InitNetwork(	chIdentificationTQ chan string,
 					chOrderTQ chan src.ButtonOrder,
 					chOrderFQ chan src.ButtonOrder,
 					chDisconElevatorTQ chan string) {
+
 
 	chVerifyConnectedElevators 	:= make(chan bool)
 	chReceivedMessage 			:= make(chan message)
@@ -164,14 +167,13 @@ func networkManager(chIdentificationTQ chan string,
 				if (receivedMessage.senderAddress == ourIP) {
 					break
 				}
-
 				connectedElevators[receivedMessage.senderAddress] = true
 			
 				if (receivedMessage.messageType == "elevatorData") {
-					chElevatorDataTQ <- ElevatorMessage{receivedMessage.senderAddress, UnpackElevatorData(receivedMessage.data)}
+					chElevatorDataTQ <- ElevatorMessage{receivedMessage.senderAddress, receivedMessage.elevatorData}
 
 				}else if (receivedMessage.messageType == "order") {
-					chOrderTQ <- UnpackOrder(receivedMessage.data)
+					chOrderTQ <- receivedMessage.order
 				}
 
 
