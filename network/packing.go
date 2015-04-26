@@ -28,13 +28,13 @@ func UnpackOrder(packedOrder []byte) src.ButtonOrder {
 	return unpackedOrder
 }
 
-func PackMessage(unpackedMessage message) []byte {
+func PackMessage(unpackedMessage Message) []byte {
 	packedMessage, _ := json.Marshal(unpackedMessage)
 	return packedMessage
 }
 
-func UnpackMessage(packedMessage []byte) message {
-	var unpackedMessage message
+func UnpackMessage(packedMessage []byte) Message {
+	var unpackedMessage Message
 	json.Unmarshal(packedMessage, &unpackedMessage)
 	return unpackedMessage
 }
