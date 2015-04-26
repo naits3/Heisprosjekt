@@ -17,6 +17,7 @@ var sendMessageInterval time.Duration = 80*time.Millisecond
 
 type message struct {
 	senderAddress 	string
+	messageType		string
 	data 			[]byte
 }
 
@@ -35,7 +36,9 @@ func sendElevatorData(broadcastConn *net.UDPConn, chSendElevatorData chan src.El
 				dataToSend = elevatorData
 
 			default:
-				broadcastConn.Write(PackElevatorData(dataToSend))
+				msg := message{ourIP, "elevatorData", PackElevatorData(dataToSend)}
+				packedMsg := PackMessage(msg)
+				broadcastConn.Write(packedMsg)
 				time.Sleep(sendMessageInterval)
 		}
 	}
@@ -55,12 +58,10 @@ func listenForMessage(chReceivedMessage chan message){
 
 	defer conn.Close()
 	for {
-		lengthOfMessage, IPaddressAndPort, _ := conn.ReadFromUDP(buffer)
-		
-		IPaddressAndPortArray := strings.Split(IPaddressAndPort.String(),":")
-		IPaddress := IPaddressAndPortArray[0]
-		
-		chReceivedMessage <- message{ IPaddress, buffer[:lengthOfMessage] }
+		lengthOfMessage, _, _ := conn.ReadFromUDP(buffer)
+
+		msg := UnpackMessage(buffer[:lengthOfMessage])
+		chReceivedMessage <- msg
 	}
 }
 
@@ -85,8 +86,9 @@ func createBroadcastConn() *net.UDPConn{
 
 
 func sendOrder(broadcastConn *net.UDPConn, order src.ButtonOrder) {
-	packedOrder := PackOrder(order)
-	broadcastConn.Write(packedOrder)
+	msg := message{ourIP, "order", PackOrder(order)}
+	packedMsg := PackMessage(msg)
+	broadcastConn.Write(packedMsg)
 }
 
 
@@ -165,13 +167,13 @@ func networkManager(chIdentificationTQ chan string,
 
 				connectedElevators[receivedMessage.senderAddress] = true
 			
-				if (len(receivedMessage.data) > 50) {
+				if (receivedMessage.messageType == "elevatorData") {
 					chElevatorDataTQ <- ElevatorMessage{receivedMessage.senderAddress, UnpackElevatorData(receivedMessage.data)}
 
-				}else {
+				}else if (receivedMessage.messageType == "order") {
 					chOrderTQ <- UnpackOrder(receivedMessage.data)
 				}
-				
+
 
 			case elevatorData := <- chElevatorDataFQ:
 				chSendElevatorData <- elevatorData		
