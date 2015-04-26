@@ -235,10 +235,10 @@ func commandPrint() {
 func InitQueue(chFloorFC chan int, chOrderFC chan src.ButtonOrder, chOrderFinishedFC chan bool, chButtonLightsTC chan [src.N_FLOORS][3]int, chDestinationFloorTC chan int) {
 	var chUpdateLights = make(chan bool)
 	var chIdentificationFN = make(chan string)
-	var chElevatorDataFN = make(chan network.ElevatorMessage)
+	var chElevatorDataFN = make(chan network.ElevatorMessage, 5)
 	var chElevatorDataTN = make(chan src.ElevatorData, 2)
-	var chOrderFN = make(chan src.ButtonOrder)
-	var chOrderTN = make(chan src.ButtonOrder, 2)
+	var chOrderFN = make(chan src.ButtonOrder, 10)
+	var chOrderTN = make(chan src.ButtonOrder, 10)
 	var chDisconElevatorFN = make(chan string)
 
  	go network.InitNetwork(chIdentificationFN, chElevatorDataFN, chElevatorDataTN, chOrderFN, chOrderTN, chDisconElevatorFN)
