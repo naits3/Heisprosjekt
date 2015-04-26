@@ -166,15 +166,15 @@ func networkManager(chIdentificationTQ chan string,
 				if (receivedMessage.SenderAddress == ourIP) {
 					break
 				}
+
 				connectedElevators[receivedMessage.SenderAddress] = true
-			
-				if (receivedMessage.MessageType == "elevatorData") {
-					chElevatorDataTQ <- ElevatorMessage{receivedMessage.SenderAddress, receivedMessage.ElevatorData}
+				switch receivedMessage.MessageType {
+					case "elevatorData":
+						chElevatorDataTQ <- ElevatorMessage{receivedMessage.SenderAddress, receivedMessage.ElevatorData}
 
-				}else if (receivedMessage.MessageType == "order") {
-					chOrderTQ <- receivedMessage.Order
+					case "order":
+						chOrderTQ <- receivedMessage.Order
 				}
-
 
 			case elevatorData := <- chElevatorDataFQ:
 				chSendElevatorData <- elevatorData		
