@@ -12,9 +12,6 @@ const PORT = "20013"
 var ourIP string
 var connectedElevators = make(map[string]bool)
 
-var verifyConnectionInterval time.Duration = 2*time.Second
-var sendMessageInterval time.Duration = 80*time.Millisecond
-
 type Message struct {
 	SenderAddress 	string
 	MessageType		string
@@ -29,6 +26,7 @@ type ElevatorMessage struct {
 
 
 func sendElevatorData(broadcastConn *net.UDPConn, chSendElevatorData chan src.ElevatorData){
+	sendMessageInterval := 80*time.Millisecond
 	dataToSend := <- chSendElevatorData		
 	
 	for {
@@ -112,6 +110,8 @@ func GetIPAddress() string {
 
 
 func verifyConnectionTimer(chVerifyConnectedElevators chan bool) {
+	verifyConnectionInterval := 2*time.Second
+
 	for {
 		time.Sleep(verifyConnectionInterval)
 		chVerifyConnectedElevators <- true

@@ -10,7 +10,7 @@ import "C"
 import "Heisprosjekt/src"
 import "fmt"
 import "time"
-
+import "os"
 
 type Command struct{
 	CommandType int
@@ -18,8 +18,6 @@ type Command struct{
 	Floor int
 	ButtonType int
 }
-
-
 
 
 const(
@@ -31,34 +29,33 @@ const(
 
 
 
-func InitIo(chCommandFromControl chan Command, chOrderToControl chan src.ButtonOrder, chFloorToControl chan int){
+func InitIo(chCommandFC chan Command, chOrderTC chan src.ButtonOrder, chFloorTC chan int){
 
 	err := C.elev_init()
-	if  err < 0 { fmt.Println("Could not initialize hardware") }
+	if  err < 0 { 
+		fmt.Println("Could not initialize hardware")	
+		os.Exit(1)
+	}
 
 	var chOrder = make(chan src.ButtonOrder)
 	var chFloor = make(chan int)
 	
-	go ioManager(chCommandFromControl,chOrderToControl,chFloorToControl,chOrder,chFloor)
+	go ioManager(chCommandFC,chOrderTC,chFloorTC,chOrder,chFloor)
 	go pollFloor(chFloor)
 	go pollOrder(chOrder)
 }
 
-func ioManager(	chCommandFromControl chan Command, 
-				chOrderToControl 	 chan src.ButtonOrder,
-			   	chFloorToControl 	 chan int, 
-			   	chOrder 		     chan src.ButtonOrder, 
-			   	chFloor 			 chan int){
+func ioManager(	chCommandFC chan Command, chOrderTC chan src.ButtonOrder,chFloorTC chan int, chOrder chan src.ButtonOrder, chFloor chan int){
 	
 	for{
-		select{
-			case order :=<- chOrder:
-				chOrderToControl <- order
+		select{	
+			case order := <- chOrder:
+				chOrderTC <- order
 
 			case floor := <- chFloor:
-				chFloorToControl <- floor
+				chFloorTC <- floor
 
-			case command := <- chCommandFromControl:
+			case command := <- chCommandFC:
 				runCommand(command)
 		}
 	}
@@ -66,44 +63,46 @@ func ioManager(	chCommandFromControl chan Command,
 
 func pollOrder(chOrder chan src.ButtonOrder){
 	
-	var order[src.N_FLOORS][3]int
+	var isButtonPushed[src.N_FLOORS][3]bool
 
 	for{
 		for floor := 0; floor < src.N_FLOORS; floor++{
 			
 			if(floor < src.N_FLOORS-1){
-				if (C.elev_get_button_signal(src.BUTTON_UP, C.int(floor)) == 1 && order[floor][src.BUTTON_UP] == 0) {
+				if(isNewOrder(floor, src.BUTTON_UP,&isButtonPushed)){
 					chOrder <- src.ButtonOrder{floor, src.BUTTON_UP}
-					order[floor][src.BUTTON_UP] = 1
-				}else if(C.elev_get_button_signal(src.BUTTON_UP, C.int(floor)) == 0 && order[floor][src.BUTTON_UP] == 1){
-					order[floor][src.BUTTON_UP] = 0
 				}
-				
 			}
 
-
 			if(floor > 0){
-				if (C.elev_get_button_signal(src.BUTTON_DOWN, C.int(floor)) == 1 && order[floor][src.BUTTON_DOWN] == 0) {
+				if(isNewOrder(floor, src.BUTTON_DOWN,&isButtonPushed)){
 					chOrder <- src.ButtonOrder{floor, src.BUTTON_DOWN}
-					order[floor][src.BUTTON_DOWN] = 1
-				}else if(C.elev_get_button_signal(src.BUTTON_DOWN, C.int(floor)) == 0 && order[floor][src.BUTTON_DOWN] == 1){
-					order[floor][src.BUTTON_DOWN] = 0
 				}
-				
 			}
 			
 
-			if(C.elev_get_button_signal(src.BUTTON_INSIDE, C.int(floor)) == 1 && order[floor][src.BUTTON_INSIDE] == 0) {
-				chOrder <- src.ButtonOrder{floor, src.BUTTON_INSIDE}
-				order[floor][src.BUTTON_INSIDE] = 1
-			}else if(C.elev_get_button_signal(src.BUTTON_INSIDE, C.int(floor)) == 0 && order[floor][src.BUTTON_INSIDE] == 1){
-				order[floor][src.BUTTON_INSIDE] = 0
+			if(isNewOrder(floor, src.BUTTON_INSIDE, &isButtonPushed)){
+					chOrder <- src.ButtonOrder{floor, src.BUTTON_INSIDE}
 			}
 			
 		}
 		time.Sleep(10*time.Millisecond)
 	}
 }
+
+func isNewOrder(floor int, buttonType int, isButtonPushed *[src.N_FLOORS][3]bool) bool{	
+	
+	if (C.elev_get_button_signal(C.elev_button_type_t(buttonType), C.int(floor)) == 1 && !isButtonPushed[floor][buttonType]) {
+		isButtonPushed[floor][buttonType] = true
+		return true
+	}else if(C.elev_get_button_signal(C.elev_button_type_t(buttonType), C.int(floor)) == 0 && isButtonPushed[floor][buttonType]){
+		isButtonPushed[floor][buttonType] = false
+		return false
+	}
+	return false
+}
+
+
 
 func pollFloor(chFloor chan int){
 	previousFloor := -1

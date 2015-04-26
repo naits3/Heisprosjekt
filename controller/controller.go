@@ -13,142 +13,127 @@ const (
 	DOOR_OPEN = 2
 )
 
-var state int 
-var destinationFloor int
-var currentFloor	 int
-var isOrderFinished	 bool
+var state 				int 
+var destinationFloor 	int
+var currentFloor	 	int
 
 
 func InitController() {
 	
-	chCommandToIo 				:= make(chan io.Command)
-	chOrderFromIo 				:= make(chan src.ButtonOrder)
-	chFloorFromIo				:= make(chan int)
+	chCommandTI 			:= make(chan io.Command)
+	chOrderFI 				:= make(chan src.ButtonOrder)
+	chFloorFI				:= make(chan int)
 
-	chFloorToQueue				:= make(chan int,2)
-	chOrderToQueue 				:= make(chan src.ButtonOrder, 10)
-	//chDirectionToQueue			:= make(chan int, 10)
-	chOrderFinishedToQueue 		:= make(chan bool,2)
-	chAllOrdersFromQueue 		:= make(chan [src.N_FLOORS][3]int,2)
-	chDestinationFloorFromQueue	:= make(chan int,2)
+	chFloorTQ				:= make(chan int,2)
+	chOrderTQ 				:= make(chan src.ButtonOrder, 10)
+	chOrderFinishedTQ 		:= make(chan bool,2)
+	chButtonLightsFQ 		:= make(chan [src.N_FLOORS][3]int,2)
+	chDestinationFloorFQ	:= make(chan int,2)
 	
-	chStartTimer 				:= make(chan bool)
-	chTimeOut					:= make(chan bool)
+	chOpenDoor 				:= make(chan bool)
+	chCloseDoor				:= make(chan bool)
 
+	io.InitIo(chCommandTI, chOrderFI, chFloorFI)
+	goUpUntilReachFloor(chCommandTI, chFloorFI)	
+	
+	state = IDLE
+	
+	go queue.InitQueue(chFloorTQ, chOrderTQ, chOrderFinishedTQ, chButtonLightsFQ, chDestinationFloorFQ)
+	chFloorTQ <- currentFloor
 
-	io.InitIo(chCommandToIo, chOrderFromIo, chFloorFromIo)
-	goUpUntilReachFloor(chCommandToIo, chFloorFromIo)	
-	
-	state 			= IDLE
-	isOrderFinished = true
-	
-	go queue.InitQueue(chFloorToQueue, chOrderToQueue, chOrderFinishedToQueue, chAllOrdersFromQueue, chDestinationFloorFromQueue)
-	chFloorToQueue <- currentFloor
-
-	go controllerManager(chCommandToIo, chOrderFromIo, chFloorFromIo, chFloorToQueue, 
-						 chOrderToQueue, chOrderFinishedToQueue, 
-						 chAllOrdersFromQueue, chDestinationFloorFromQueue,chStartTimer,chTimeOut)
-	
-	go doorTimer(chStartTimer, chTimeOut)
+	go controllerManager(chCommandTI, chOrderFI, chFloorFI, chFloorTQ, chOrderTQ, chOrderFinishedTQ, chButtonLightsFQ, chDestinationFloorFQ,chOpenDoor,chCloseDoor)
+	go doorTimer(chOpenDoor, chCloseDoor)
 }
 
-func controllerManager( chCommandToIo chan io.Command,
-					 	chOrderFromIo chan src.ButtonOrder,
-					 	chFloorFromIo chan int, 
-					 	chFloorToQueue chan int, 
-					 	chOrderToQueue chan src.ButtonOrder,
-					 	chOrderFinishedToQueue chan bool, 
-					 	chAllOrdersFromQueue chan [src.N_FLOORS][3]int,
-					 	chDestinationFloorFromQueue chan int, 
-					 	chStartTimer chan bool, 
-					 	chTimeOut chan bool){
+func controllerManager( chCommandTI chan io.Command,
+					 	chOrderFI chan src.ButtonOrder,
+					 	chFloorFI chan int, 
+					 	chFloorTQ chan int, 
+					 	chOrderTQ chan src.ButtonOrder,
+					 	chOrderFinishedTQ chan bool, 
+					 	chButtonLightsFQ chan [src.N_FLOORS][3]int,
+					 	chDestinationFloorFQ chan int, 
+					 	chOpenDoor chan bool, 
+					 	chCloseDoor chan bool){
 	for {
 		select {
 			
-			case orderFromIo := <- chOrderFromIo:
-				 chOrderToQueue <- orderFromIo
+			case orderFromIo := <- chOrderFI:
+				 chOrderTQ <- orderFromIo
 
-			case currentFloor = <-chFloorFromIo:
-				 chCommandToIo  <- io.Command{io.SET_FLOOR_INDICATOR_LAMP,src.ON, currentFloor, src.BUTTON_NONE}
-				 chFloorToQueue <- currentFloor
-				 destinationFloor = <- chDestinationFloorFromQueue
+			case currentFloor = <-chFloorFI:
+				 chCommandTI  <- io.Command{io.SET_FLOOR_INDICATOR_LAMP,src.ON, currentFloor, src.BUTTON_NONE}
+				 chFloorTQ <- currentFloor
+				 destinationFloor = <- chDestinationFloorFQ
 				
 				switch state{
 					case MOVING:
 						elevatorDirection := chooseElevatorDirection()
-						chCommandToIo 		<- io.Command{io.SET_MOTOR_DIR,elevatorDirection,-1,src.BUTTON_NONE}
+						chCommandTI 		<- io.Command{io.SET_MOTOR_DIR,elevatorDirection,-1,src.BUTTON_NONE}
 
 						if(currentFloor == destinationFloor){
 							state = DOOR_OPEN
-							chCommandToIo <- io.Command{io.SET_DOOR_OPEN_LAMP,src.ON,-1,src.BUTTON_NONE}
-							chStartTimer  <- true
+							chCommandTI <- io.Command{io.SET_DOOR_OPEN_LAMP,src.ON,-1,src.BUTTON_NONE}
+							chOpenDoor  <- true
 						}
 
 					default:
-						// feilhaandtering?
 						continue
 				}
 				
 				
-			case <- chTimeOut:
+			case <- chCloseDoor:
 					state = IDLE
-					chCommandToIo <- io.Command{io.SET_DOOR_OPEN_LAMP,src.OFF,-1,src.BUTTON_NONE}
-					chOrderFinishedToQueue <- true
-					isOrderFinished = true
+					chCommandTI <- io.Command{io.SET_DOOR_OPEN_LAMP,src.OFF,-1,src.BUTTON_NONE}
+					chOrderFinishedTQ <- true
 
-			case ordersFromQueue := <-chAllOrdersFromQueue:
-				setLights(ordersFromQueue,chCommandToIo)
+			case ordersFromQueue := <-chButtonLightsFQ:
+				setLights(ordersFromQueue,chCommandTI)
 		
-			case destinationFloor = <- chDestinationFloorFromQueue:
+			case destinationFloor = <- chDestinationFloorFQ:
 				switch state{
 					
 					case IDLE:
 						
 						elevatorDirection := chooseElevatorDirection()
-						//chDirectionToQueue <- elevatorDirection
 						
 						if(currentFloor == destinationFloor){
 							state = DOOR_OPEN
-							chCommandToIo <- io.Command{io.SET_DOOR_OPEN_LAMP,src.ON,-1,src.BUTTON_NONE}
-							chStartTimer <- true
+							chCommandTI <- io.Command{io.SET_DOOR_OPEN_LAMP,src.ON,-1,src.BUTTON_NONE}
+							chOpenDoor <- true
 						
 						}else{
-							isOrderFinished = false
-							chCommandToIo <- io.Command{io.SET_MOTOR_DIR,elevatorDirection,-1,src.BUTTON_NONE}
+							chCommandTI <- io.Command{io.SET_MOTOR_DIR,elevatorDirection,-1,src.BUTTON_NONE}
 							state = MOVING
-						}		
-
-					case MOVING:
-						isOrderFinished = false
-
-					// default:
-					// 	time.Sleep(10*time.Millisecond)
-				}							
+						}
+					default:
+						continue
+				}		
 		}
 	}
 }
 
-func setLights(knowOrders [src.N_FLOORS][3]int, chCommandToIo chan io.Command){
+func setLights(knowOrders [src.N_FLOORS][3]int, chCommandTI chan io.Command){
 	for floor := 0; floor < src.N_FLOORS; floor ++ {
-		chCommandToIo <- io.Command{io.SET_BUTTON_LAMP,knowOrders[floor][src.BUTTON_UP],     floor,src.BUTTON_UP}
-		chCommandToIo <- io.Command{io.SET_BUTTON_LAMP,knowOrders[floor][src.BUTTON_DOWN],   floor,src.BUTTON_DOWN}
-		chCommandToIo <- io.Command{io.SET_BUTTON_LAMP,knowOrders[floor][src.BUTTON_INSIDE], floor,src.BUTTON_INSIDE}
+		chCommandTI <- io.Command{io.SET_BUTTON_LAMP,knowOrders[floor][src.BUTTON_UP],     floor,src.BUTTON_UP}
+		chCommandTI <- io.Command{io.SET_BUTTON_LAMP,knowOrders[floor][src.BUTTON_DOWN],   floor,src.BUTTON_DOWN}
+		chCommandTI <- io.Command{io.SET_BUTTON_LAMP,knowOrders[floor][src.BUTTON_INSIDE], floor,src.BUTTON_INSIDE}
 	}
 }
 
-func goUpUntilReachFloor(chCommandToIo chan io.Command, chFloorFromIo chan int){
-	chCommandToIo  	<- io.Command{io.SET_MOTOR_DIR,src.DIR_UP,-1,src.BUTTON_NONE}
-	currentFloor	= <- chFloorFromIo
-	chCommandToIo  	<- io.Command{io.SET_MOTOR_DIR,src.DIR_STOP,-1,src.BUTTON_NONE}
-	chCommandToIo  	<- io.Command{io.SET_FLOOR_INDICATOR_LAMP,src.ON,currentFloor,src.BUTTON_NONE}
+func goUpUntilReachFloor(chCommandTI chan io.Command, chFloorFI chan int){
+	chCommandTI  	<- io.Command{io.SET_MOTOR_DIR,src.DIR_UP,-1,src.BUTTON_NONE}
+	currentFloor	= <- chFloorFI
+	chCommandTI  	<- io.Command{io.SET_MOTOR_DIR,src.DIR_STOP,-1,src.BUTTON_NONE}
+	chCommandTI  	<- io.Command{io.SET_FLOOR_INDICATOR_LAMP,src.ON,currentFloor,src.BUTTON_NONE}
 }
 
-func doorTimer(chStartTimer chan bool, chTimeOut chan bool){
+func doorTimer(chOpenDoor chan bool, chCloseDoor chan bool){
 	
 	for{
-		<-chStartTimer
+		<-chOpenDoor
 		time.Sleep(2*time.Second)
-		chTimeOut <- true		
+		chCloseDoor <- true		
 	}
 }
 
@@ -164,12 +149,3 @@ func chooseElevatorDirection() int {
 		return src.DIR_STOP
 	}
 }
-
-/*
-BUGS
-If a ordere for next floor is recived and the next floor equals the current floor, the confirmation wont be sent. 	| OK
-We may get some problems with openDoor. 																			| 
-Fix floorindicator 																									| OK
-Error handling when reach new floor
-change name on chAllOrdersFromQueue and queueORder variable 														|		
-*/

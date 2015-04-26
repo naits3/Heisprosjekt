@@ -35,7 +35,6 @@ func determineButtonLights(allElevatorsData map[string] src.ElevatorData) [src.N
 	return buttonLights
 }
 
-
 func assignOrder(allElevatorsData map[string] src.ElevatorData, order src.ButtonOrder) {
 	var minCostID string
 	largeNumber := 100000
@@ -83,7 +82,6 @@ func calcOrderCost(elevatorData src.ElevatorData, order src.ButtonOrder) int {
 	cost+= COST_FOR_MOVEMENT * abs(elevatorData.Floor - order.Floor)
 	return cost 
 }
-
 
 func isOrderAtFloor(elevatorData src.ElevatorData, buttonType int, floor int) bool {
 	return elevatorData.OutsideOrders[floor][buttonType] == ORDER || elevatorData.InsideOrders[floor] == ORDER
@@ -217,7 +215,6 @@ func updateLightsTimer(timeout chan bool) {
 	}
 }
 
-
 func abs(value int) int {
 	if (value >= 0) { 	
 		return value
@@ -225,7 +222,6 @@ func abs(value int) int {
 		return -1*value
 	}
 }
-
 
 func commandPrint() {
 	println(" ---- ORDERS ------")
