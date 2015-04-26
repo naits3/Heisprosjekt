@@ -17,15 +17,51 @@ var state 				int
 var destinationFloor 	int
 var currentFloor	 	int
 
+func setLights(buttonLights [src.N_FLOORS][3]int, chCommandTI chan io.Command){
+	for floor := 0; floor < src.N_FLOORS; floor ++ {
+		chCommandTI <- io.Command{io.SET_BUTTON_LAMP,buttonLights[floor][src.BUTTON_UP],     floor,src.BUTTON_UP}
+		chCommandTI <- io.Command{io.SET_BUTTON_LAMP,buttonLights[floor][src.BUTTON_DOWN],   floor,src.BUTTON_DOWN}
+		chCommandTI <- io.Command{io.SET_BUTTON_LAMP,buttonLights[floor][src.BUTTON_INSIDE], floor,src.BUTTON_INSIDE}
+	}
+}
+
+func goUpUntilReachFloor(chCommandTI chan io.Command, chFloorFI chan int){
+	chCommandTI  	<- io.Command{io.SET_MOTOR_DIR,src.DIR_UP,-1,src.BUTTON_NONE}
+	currentFloor	= <- chFloorFI
+	chCommandTI  	<- io.Command{io.SET_MOTOR_DIR,src.DIR_STOP,-1,src.BUTTON_NONE}
+	chCommandTI  	<- io.Command{io.SET_FLOOR_INDICATOR_LAMP,src.ON,currentFloor,src.BUTTON_NONE}
+}
+
+func doorTimer(chOpenDoor chan bool, chCloseDoor chan bool){
+	
+	for{
+		<-chOpenDoor
+		time.Sleep(2*time.Second)
+		chCloseDoor <- true		
+	}
+}
+
+func chooseElevatorDirection() int {
+	
+	if(currentFloor<destinationFloor){
+		return src.DIR_UP
+	
+	}else if(currentFloor>destinationFloor){
+		return src.DIR_DOWN
+	
+	}else{
+		return src.DIR_STOP
+	}
+}
 
 func InitController() {
 	
 	chCommandTI 			:= make(chan io.Command)
-	chOrderFI 				:= make(chan src.ButtonOrder)
+	chOrderFI 				:= make(chan src.ButtonOrder,512)
 	chFloorFI				:= make(chan int)
 
 	chFloorTQ				:= make(chan int,2)
-	chOrderTQ 				:= make(chan src.ButtonOrder, 10)
+	chOrderTQ 				:= make(chan src.ButtonOrder, 512)
 	chOrderFinishedTQ 		:= make(chan bool,2)
 	chButtonLightsFQ 		:= make(chan [src.N_FLOORS][3]int,2)
 	chDestinationFloorFQ	:= make(chan int,2)
@@ -58,17 +94,17 @@ func controllerManager( chCommandTI chan io.Command,
 	for {
 		select {
 			
-			case orderFromIo := <- chOrderFI:
-				 chOrderTQ <- orderFromIo
+			case order := <- chOrderFI:
+				 chOrderTQ <- order
 
-			case currentFloor = <-chFloorFI:
-				 chCommandTI  <- io.Command{io.SET_FLOOR_INDICATOR_LAMP,src.ON, currentFloor, src.BUTTON_NONE}
-				 chFloorTQ <- currentFloor
+			case currentFloor = <- chFloorFI:
+				 chCommandTI  	<- io.Command{io.SET_FLOOR_INDICATOR_LAMP,src.ON, currentFloor, src.BUTTON_NONE}
+				 chFloorTQ 		<- currentFloor
 				 destinationFloor = <- chDestinationFloorFQ
 				
 				switch state{
 					case MOVING:
-						elevatorDirection := chooseElevatorDirection()
+						elevatorDirection   := chooseElevatorDirection()
 						chCommandTI 		<- io.Command{io.SET_MOTOR_DIR,elevatorDirection,-1,src.BUTTON_NONE}
 
 						if(currentFloor == destinationFloor){
@@ -87,14 +123,12 @@ func controllerManager( chCommandTI chan io.Command,
 					chCommandTI <- io.Command{io.SET_DOOR_OPEN_LAMP,src.OFF,-1,src.BUTTON_NONE}
 					chOrderFinishedTQ <- true
 
-			case ordersFromQueue := <-chButtonLightsFQ:
-				setLights(ordersFromQueue,chCommandTI)
+			case buttonLights := <-chButtonLightsFQ:
+				setLights(buttonLights,chCommandTI)
 		
 			case destinationFloor = <- chDestinationFloorFQ:
 				switch state{
-					
 					case IDLE:
-						
 						elevatorDirection := chooseElevatorDirection()
 						
 						if(currentFloor == destinationFloor){
@@ -110,42 +144,5 @@ func controllerManager( chCommandTI chan io.Command,
 						continue
 				}		
 		}
-	}
-}
-
-func setLights(knowOrders [src.N_FLOORS][3]int, chCommandTI chan io.Command){
-	for floor := 0; floor < src.N_FLOORS; floor ++ {
-		chCommandTI <- io.Command{io.SET_BUTTON_LAMP,knowOrders[floor][src.BUTTON_UP],     floor,src.BUTTON_UP}
-		chCommandTI <- io.Command{io.SET_BUTTON_LAMP,knowOrders[floor][src.BUTTON_DOWN],   floor,src.BUTTON_DOWN}
-		chCommandTI <- io.Command{io.SET_BUTTON_LAMP,knowOrders[floor][src.BUTTON_INSIDE], floor,src.BUTTON_INSIDE}
-	}
-}
-
-func goUpUntilReachFloor(chCommandTI chan io.Command, chFloorFI chan int){
-	chCommandTI  	<- io.Command{io.SET_MOTOR_DIR,src.DIR_UP,-1,src.BUTTON_NONE}
-	currentFloor	= <- chFloorFI
-	chCommandTI  	<- io.Command{io.SET_MOTOR_DIR,src.DIR_STOP,-1,src.BUTTON_NONE}
-	chCommandTI  	<- io.Command{io.SET_FLOOR_INDICATOR_LAMP,src.ON,currentFloor,src.BUTTON_NONE}
-}
-
-func doorTimer(chOpenDoor chan bool, chCloseDoor chan bool){
-	
-	for{
-		<-chOpenDoor
-		time.Sleep(2*time.Second)
-		chCloseDoor <- true		
-	}
-}
-
-func chooseElevatorDirection() int {
-	
-	if(currentFloor<destinationFloor){
-		return src.DIR_UP
-	
-	}else if(currentFloor>destinationFloor){
-		return src.DIR_DOWN
-	
-	}else{
-		return src.DIR_STOP
 	}
 }
