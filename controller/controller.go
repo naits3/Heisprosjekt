@@ -7,6 +7,13 @@ import (
 	"time"
 )
 
+/* Name-conventions:
+FI = From IO
+TI = To IO
+FQ = From Queue
+TQ = To Queue
+*/
+
 const (
 	IDLE = 0
 	MOVING = 1

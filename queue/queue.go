@@ -4,8 +4,14 @@ import (
 	"Heisprosjekt/src"
 	"Heisprosjekt/network"
 	"time"
-	"Heisprosjekt/tools"
 )
+
+/* Name-conventions:
+FC = From Controller
+TC = To Controller
+FN = From Network
+TN = To Network
+*/
 
 const (
 	ORDER = 1
@@ -223,14 +229,6 @@ func abs(value int) int {
 	}
 }
 
-func commandPrint() {
-	println(" ---- ORDERS ------")
-	for id, queues := range allElevatorsData {
-		println(id)
-		tools.PrintQueue(queues)
-	}
-}
-
 
 func InitQueue(chFloorFC chan int, chOrderFC chan src.ButtonOrder, chOrderFinishedFC chan bool, chButtonLightsTC chan [src.N_FLOORS][3]int, chDestinationFloorTC chan int) {
 	var chUpdateLights = make(chan bool)
@@ -274,7 +272,6 @@ func queueManager(	chFloorFC chan int,
 			case <- chUpdateLights:
 				buttonLights := determineButtonLights(allElevatorsData)
 				chButtonLightsTC <- buttonLights
-				commandPrint()
 
 			case order := <- chOrderFN:
 				assignOrder(allElevatorsData, order)

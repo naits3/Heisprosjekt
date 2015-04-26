@@ -12,6 +12,11 @@ import "fmt"
 import "time"
 import "os"
 
+/* Name-conventions:
+FC = From Controller
+TC = To Controller
+*/
+
 type Command struct{
 	CommandType int
 	SetValue int
@@ -39,14 +44,12 @@ func InitIo(chCommandFC chan Command, chOrderTC chan src.ButtonOrder, chFloorTC 
 
 	var chOrder = make(chan src.ButtonOrder)
 	var chFloor = make(chan int)
-	
 	go ioManager(chCommandFC,chOrderTC,chFloorTC,chOrder,chFloor)
 	go pollFloor(chFloor)
 	go pollOrder(chOrder)
 }
 
 func ioManager(	chCommandFC chan Command, chOrderTC chan src.ButtonOrder,chFloorTC chan int, chOrder chan src.ButtonOrder, chFloor chan int){
-	
 	for{
 		select{	
 			case order := <- chOrder:
@@ -84,8 +87,8 @@ func pollOrder(chOrder chan src.ButtonOrder){
 			if(isNewOrder(floor, src.BUTTON_INSIDE, &isButtonPushed)){
 					chOrder <- src.ButtonOrder{floor, src.BUTTON_INSIDE}
 			}
-			
 		}
+
 		time.Sleep(10*time.Millisecond)
 	}
 }
@@ -150,4 +153,3 @@ func runCommand(command Command){
 			C.elev_set_door_open_lamp(C.int(command.SetValue))
 	}
 }
-

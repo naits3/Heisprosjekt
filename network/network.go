@@ -8,6 +8,11 @@ import (
 	"Heisprosjekt/src"
 )
 
+/* Name-conventions:
+FQ = From Queue
+TQ = To Queue
+*/
+
 const PORT = "20013"	
 var ourIP string
 var connectedElevators = make(map[string]bool)
