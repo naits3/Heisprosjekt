@@ -189,5 +189,4 @@ func networkManager(chIdentificationTQ chan string,
 				}
 		}
 	}
-	
 }
